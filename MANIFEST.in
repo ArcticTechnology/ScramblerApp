@@ -1,2 +1,2 @@
 #Include config data_files
-recursive-include config *
+recursive-include config .config-examaple

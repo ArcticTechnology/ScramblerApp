@@ -37,7 +37,7 @@ setup(
 	long_description_content_type='text/markdown',
 
 	# Define the URL of the GitHub.
-	url='?????',
+	url='https://github.com/ArcticTechnology/ScramblerApp',
 
 	# Define the dependencies the library needs in order to run.
 	#install_requires=[
