@@ -1,740 +1,349 @@
-import os; import base64; import random; import json
+import os; import random; import json
 import shlex; import subprocess
-from os.path import isfile, isdir, join, exists
-from getpass import getpass
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.backends import default_backend
+from os.path import isfile, isdir, exists
 from .utils.dircrawler import DirCrawler as dc
+from .utils.encryption import OpenSSLEncyptor as ossl
 from .utils.filemodder import FileModder as fm
 from .utils.commoncmd import CommonCmd as cmd
 
 class Scrambler:
+
+	def formatted_ext(self, raw_extension):
+		if raw_extension == '*':
+			return None
+		if raw_extension == '':
+			return '.txt'
+		if raw_extension[0] != '.':
+			return '.' + raw_extension
+		else:
+			return raw_extension
 
 	def timetravel(self,path,hours_ago=None):
 		if hours_ago == None: hours_ago = random.randrange(1,121000)
 
 		pathlex = shlex.quote(path)
 		hourslex = shlex.quote(str(hours_ago))
-
-		cmd = 'touch -d "{h} hours ago" {p}'.format(h=hourslex,p=pathlex)
-		cmdlex = shlex.split(cmd)
-
-		process = subprocess.run(cmdlex,
+		command = shlex.split('touch -d "{h} hours ago" {p}'.format(h=hourslex,p=pathlex))
+		process = subprocess.run(command,
 					stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
 		returncode = process.returncode
 
 		if returncode == 0:
-			return 'DT changed for: ' + path
+			return {'status': 200, 'message': 'Timetravelled: ' + path}
 		else:
-			return ('Error changing DT for: ' + path + '\n' +
-									'Error Code: ' + process.stderr.decode())
+			return {'status': 400, 'message': 'Error timetravelling: ' + path}
 
-	def timetravel_files(self, wd, extension):
-		files = dc.get_files(wd, extension=extension)
+	def timetravel_files(self, dir, extension=None):
+		files = dc.get_files(dir, extension=extension)
 
-		if len(files) <= 0: return 'No files found.'
+		if len(files) <= 0: return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
 
-		for f in files: print(self.timetravel(f))
+		output = [self.timetravel(f)['message'] for f in files]
+		return {'status': 200, 'message': 'Timetravel files complete.', 'output': output}
 
-		return 'Scramble files complete.'
+	def timetravel_folders(self, dir):
+		folders = dc.get_folders(dir)
 
-	def timetravel_folders(self, wd):
-		folders = dc.get_folders(wd)
+		if exists(dir) != True: return {'status': 400, 'message': 'Error timetravelling: no directory found.', 'output': []}
 
-		if len(folders) <= 0: return 'No folders found.'
+		if len(folders) <= 0:
+			output = ['No folders found to timetravel, no action taken.']
+		else:
+			output = [self.timetravel(folder)['message'] for folder in folders]
 
-		for folder in folders: print(self.timetravel(folder))
+		output.append(self.timetravel(dir)['message'])
 
-		print(self.timetravel(wd))
+		return {'status': 200, 'message': 'Timetravel folders complete.', 'output': output}
 
-		return 'Scramble folders complete.'
+	def invalid_stash_data(self, data):
+		no_origin_dir = 'origin_dir' not in data
+		no_stash_dir = 'stash_dir' not in data
+		no_stash_key = 'stash_key' not in data
+		if no_origin_dir or no_stash_dir or no_stash_key:
+			return True
+		if type(data['origin_dir']) != str or type(data['stash_dir']) != str:
+			return True
+		if type(data['stash_key']) != dict:
+			return True
+		stash_key = data['stash_key']
+		keys = list(stash_key.keys())
+		values = list(stash_key.values())
+		if len(keys) == 0 or len(values) == 0: return True
+		if len(keys) != len(values): return True
+		return False
 
-	def stash(self, input_file_names, output_file_names, old_dir, new_dir, inverse=False):
-		if output_file_names == '' or input_file_names == '':
-			return 'Error: output and target cannot be blank.'
+	def _censor_stash_errors(self, errormsg, sensitiveinfo, censored=True):
+		if censored == True:
+			return errormsg + '. Please check your config file.'
+		else:
+			return errormsg + ' ' + sensitiveinfo
+
+	def stash(self, curr_filename, curr_dir, new_filename, new_dir, overwrite=False, remove=False, censored=True):
+		curr_filepath = dc.joinpath(curr_dir, curr_filename)
+		if exists(curr_filepath) != True: return {'status': 400,
+					'message': self._censor_stash_errors(
+						'Error: stash file was not found', curr_filepath, censored)}
+
+		if isfile(curr_filepath) != True: return {'status': 400,
+					'message': self._censor_stash_errors(
+						'Error: invalid stash file', curr_filepath, censored)}
+
+		new_filepath = dc.joinpath(new_dir, new_filename)
+		if exists(new_filepath) == True and overwrite == False: return {'status': 400,
+					'message': self._censor_stash_errors(
+						'Error: stash file already exists', new_filepath, censored)}
+
+		response = cmd.copyfile(curr_filepath,new_filepath)
+		if response['status'] != 200: return response
+		self.timetravel(new_filepath)
+		if remove == True: 
+			try:
+				os.remove(curr_filepath)
+			except:
+				return {'status': 400, 'message': self._censor_stash_errors(
+						'Error: failed to remove stash file', curr_filepath, censored)}
+		return response
+
+	def stash_all(self, data, inverse=False):
+		"""
+		Data format:
+		{"origin_dir": "/home/origin_directory/",
+		"stash_dir": "/home/stash_directory/",
+		"stash_key": {
+		"filename1": "stashed_filename1",
+		"filename2": "stashed_filename2",
+		"filename3": "stashed_filename3"}}
+		"""
+		result = {'status': None, 'message': None, 'output': []}
+		origin_dir = data['origin_dir']
+		stash_dir = data['stash_dir']
+
+		if isdir(origin_dir) == False: return {'status': 400,
+				'message': 'Error: could not find origin directory {}'.format(origin_dir), 'output': []}
+
+		if isdir(stash_dir) == False: return {'status': 400,
+				'message': 'Error: could not find stash directory. Please check your config file.', 'output': []}
+
+		stash_key = data['stash_key']
+		keys = list(stash_key.keys())
+		values = list(stash_key.values())
+		statuscodes = []
+
+		for i in range(len(keys)):
+			if keys[i] == '' or values[i] == '': return {'status': 400,
+				'message': 'Error: Invalid config file, keys and values cannot be blank. Please check your config file.',
+				'output': []}
+
+		for i in range(len(keys)):
+			if inverse == True:
+				response = self.stash(values[i],stash_dir,keys[i],origin_dir,overwrite=False,remove=False)
+			else:
+				response = self.stash(keys[i],origin_dir,values[i],stash_dir,overwrite=True,remove=True)
+			statuscodes.append(response['status'])
+			result['output'].append(response['message'])
 
 		if inverse == True:
-			message = 'Retrieve complete.'
+			keyword = 'Retrieve'
+			if len(statuscodes) > 1 and 200 not in statuscodes:
+				result['status'] = 400
+				result['message'] = 'Error: no stash files retrieved. Please check your config file.'
+				return result
 		else:
-			message = 'Stash complete.'
-
-		inputs = input_file_names.split(' ')
-		outputs = output_file_names.split(' ')
-
-		curr_files = []
-		new_files = []
-
-		for i in inputs:
-
-			if len(i) > 0:
-				curr_files.append(join(old_dir,i))
-
-		for o in outputs:
-			if inverse != True and exists(join(new_dir,o)) == True:
-				return 'Error: file already exists in {}'.format(join(new_dir,o))
-
-			if len(o) > 0:
-				new_files.append(join(new_dir,o))
-
-		if len(curr_files) != len(new_files):
-			return 'Error: the number of input files and output files must equal.'
-
-		for i in range(len(new_files)):
-			if i < len(curr_files):
-				if isfile(join(old_dir,curr_files[i])) != True:
-					print('Not found: {}'.format(join(old_dir,curr_files[i])))
-				else:
-					if new_files[i] != '':
-						print(cmd.cp_file(curr_files[i],new_files[i]))
-						if inverse == True:
-							print(self.timetravel(new_files[i]))
-							print(self.timetravel(new_dir))
+			keyword = 'Stash'
+			if len(statuscodes) > 1 and 200 not in statuscodes:
+				result['status'] = 400
+				result['message'] = 'Error: no stash files found in {}'.format(origin_dir)
+				return result
+			timetravel = self.timetravel(stash_dir)
+			if timetravel['status'] == 200:
+				result['output'].append('Timetravel completed for stash directory.')
 			else:
-				break
-
-		return message
-
-	def stash_all(self, wd, config_data, inverse=False):
-		target_dir = config_data['target_dir']
-		if isdir(target_dir) != True:
-			return 'Error: could not find target dir {}'.format(target_dir)
-
-		nms = config_data['file_names']
-
-		if inverse == True:
-			input_file_names = ' '.join(list(nms.keys()))
-			output_file_names = ' '.join(list(nms.values()))
-			old_dir = wd
-			new_dir = target_dir
-		else:
-			input_file_names = ' '.join(list(nms.values()))
-			output_file_names = ' '.join(list(nms.keys()))
-			old_dir = target_dir
-			new_dir = wd
-
-		return self.stash(input_file_names,output_file_names,old_dir,new_dir,inverse)
-
-	def _get_fernettoken(self, password, salt_byte):
-		pass_byte = bytes(password, encoding='utf-8')
-		kdf = PBKDF2HMAC(
-			algorithm=hashes.SHA256(),
-			length=32,
-			salt=salt_byte,
-			iterations=320000,
-			backend=default_backend())
-		token = Fernet(base64.urlsafe_b64encode(kdf.derive(pass_byte)))
-
-		del password; del pass_byte
-		return token
-
-	def _prepend_salt(self, encryption_results):
-		if encryption_results['status'] != 200: return encryption_results['message']
-
-		output = encryption_results['output']
-
-		return output['hash'] + '.' + output['salt']
-
-	def _extract_salt(self, message):
-		if '.' in message:
-			extension = dc._get_extension(message)
-			return extension[1:]
-		else:
-			raise ValueError('Error: Failed to extract salt.')
-
-	def openssl_enc(self, password, data, decrypt=False):
-		# data = {'medium': 'file', 'input': '/filepath/example', 'outpath': '/example-c', 'salt': None}
-		# data = {'medium': 'text', 'input': 'hello world', 'outpath': None, 'salt': None}
-		medium_options = ['file', 'text']
-		result = {'status': None, 'message': None, 'output': None}
-		if type(data) != dict: return {'status': 200, 'message': 'Error: Input data incorrect format.'}
-		if data['medium'] not in medium_options: return {'status': 200, 'message': 'Error: Invalid medium.'}
-
-		passwd = shlex.quote(password)
-		dashd = ' -d' if decrypt == True else ''
-		keyword = 'Decrypt' if decrypt == True else 'Encrypt'
-
-		if data['medium'] == 'text':
-			# If ' or " in text throw an error Cannot garuntee quote char
-			text = shlex.quote(data['input'])
-			#c = 'echo "{t}" | openssl aes-256-cbc{d} -a -salt -pbkdf2 -k {p}'.format(
-			#			t=text,d=dashd,p=passwd)
-
-			pipetext = shlex.split('echo "{t}"'.format(t=text))
-			command = shlex.split('openssl aes-256-cbc{d} -a -salt -pbkdf2 -k {p}'.format(
-						d=dashd,p=passwd))
-			pipe = subprocess.Popen(pipetext, stdout=subprocess.PIPE)
-			process = subprocess.check_output(command, stdin=pipe.stdout)
-			pipe.wait()
-			# figure out how to get error
-			raw_output = process.decode()
-			# error handling the output
-			clean1 = raw_output[:-1] if raw_output[-1] == "\n" else raw_output
-			clean2 = clean1[:-1] if clean1[-1] == "'" else clean1
-			clean3 = clean2[1:] if clean2[0] == "'" else clean2
-
-			result['status'] = 200
-			result['message'] = 'Success...'
-			result['output'] = clean3
-			return result
-
-		if data['medium'] == 'file':
-			try:
-				filepath = shlex.quote(data['input'])
-				outpath = shlex.quote(data['outpath'])
-			except:
-				return {'status': 200, 'message': 'Error: Invalid medium.'}
-
-			c = 'openssl aes-256-cbc{d} -a -salt -pbkdf2 -in {f} -out {o} -k {p}'.format(
-							d=dashd,f=filepath,o=outpath,p=passwd)
-			command = shlex.split(c)
-			process = subprocess.run(command,
-							stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-			#stdout = process.stdout.decode() #to see error code
-			returncode = process.returncode
-
-			if returncode == 0:
-				result['status'] = 200
-				result['message'] = '{}ed: '.format(keyword) + filepath
-				return result
-			else:
-				result['status'] = 400
-				result['message'] = 'Error {}ing: '.format(keyword) + filepath
-				return result
-
-	def encrypt_msg(self, message, password, salt=None, decrypt=False):
-		result = {'status': None, 'message': None, 'output':{}}
-
-		#=== Create Salt ===
-		if decrypt==True:
-			if type(salt) != str:
-				result['status'] = 400
-				result['message'] = 'Error: Salt of type str is required.'
-				del password
-				return result
-			salt_byte = base64.urlsafe_b64decode(bytes(salt,'utf-8'))
-		else:
-			if salt != None:
-				result['status'] = 400
-				result['message'] = 'Error: Leave salt=None for encryption, it will auto-generate.'
-				del password
-				return result
-			salt_byte = os.urandom(16)
-			salt = base64.urlsafe_b64encode(salt_byte).decode('utf-8')
-
-		msg_byte = bytes(message, encoding='utf-8')
-		token = self._get_fernettoken(password, salt_byte)
-
-		#=== Create Hash ===
-		if decrypt==True:
-			try:
-				hash = base64.urlsafe_b64decode(msg_byte)
-				hash_readable = token.decrypt(hash).decode('utf-8')
-			except:
-				result['status'] = 400
-				result['message'] = 'Error: Unable to decrypt hash. Potentially invalid password or salt.'
-				del password
-				return result
-		else:
-			hash = token.encrypt(msg_byte)
-			hash_readable = base64.urlsafe_b64encode(hash).decode('utf-8')
+				result['output'].append('Error timetravelling stash directory.')
 
 		result['status'] = 200
-		result['message'] = 'Successfully completed.'
-		result['output']['hash'] = hash_readable
-		result['output']['salt'] = salt
-
-		del password
+		result['message'] = '{} completed.'.format(keyword)
 		return result
 
-	def encrypt_file(self,filepath,password,
-					decrypt=False,keep_org=True,naked=False):
+	def encrypt_msg(self, password, message, decrypt=False):
+		data = {'medium': 'text', 'input': message, 'outpath': None}
+		result = ossl.encrypt(password, data, decrypt)
+		del password; return result
 
+	def encrypt_file(self, password, filepath,
+					decrypt=False, keep_org=False, naked=False):
 		result = {'status': None, 'message': None}
-		keyword = 'Decrypt' if decrypt == True else 'Encrypt'
-
 		tag_options = {'encrypt' : ['-c'],
 			'decrypt' : ['-d', '-NAKED']}
- 
+
 		if decrypt == True:
-			option = ' -d' #openssl
 			index = 1 if naked == True else 0
-			npath = fm.add_tag(filepath,tag_options['encrypt'],
-								tag_options['decrypt'],tag_options['decrypt'][index])
+			outpath = fm.add_tag(filepath,tag_options['decrypt'][index],
+								tag_options['encrypt'],tag_options['decrypt'])
 		else:
-			option = ' ' #openssl
-			npath = fm.add_tag(filepath,tag_options['decrypt'],
-								tag_options['encrypt'],tag_options['encrypt'][0])
+			outpath = fm.add_tag(filepath,tag_options['encrypt'][0],
+								tag_options['decrypt'],tag_options['encrypt'])
 
-		if npath == filepath:
+		if exists(filepath) == False:
 			result['status'] = 400
-			result['message'] = 'Action already performed on: ' + filepath 
-			return result
+			result['message'] = 'Error failed to find file: ' + filepath
+			del password; return result
 
-### Openssl
-		filelex = shlex.quote(filepath)
-		passlex = shlex.quote(password)
-		npathlex = shlex.quote(npath)
-
-		cmd = 'openssl aes-256-cbc{o} -a -salt -pbkdf2 -in {f} -out {n} -k {p}'.format(
-					o=option,f=filelex,n=npathlex,p=passlex)
-		cmdlex = shlex.split(cmd)
-
-		process = subprocess.run(cmdlex,
-					stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-####
-
-
-		travel = self.timetravel(npath)
-
-		result['returncode'] = process.returncode
-		result['stdout'] = process.stdout.decode()
-		result['travel'] = travel
-
-		if result['returncode'] != 0:
+		if exists(outpath) == True:
 			result['status'] = 400
-			result['message'] = ('{} Error for: '.format(keyword) + filepath + '\n' +
-									'Error Code: ' + process.stderr.decode())
-			os.remove(npath)
-			del password; del passlex; return result
+			result['message'] = 'Error output path already exists: ' + outpath
+			del password; return result
+
+		if outpath == filepath:
+			result['status'] = 400
+			result['message'] = 'Action already performed on: ' + filepath
+			del password; return result
+
+		data = {'medium': 'file', 'input': filepath, 'outpath': outpath}
+		response = ossl.encrypt(password, data, decrypt)
+		if response['status'] == 400:
+			try:
+				os.remove(outpath)
+			except:
+				pass
+			del password; return response
+
+		self.timetravel(outpath)
 
 		if keep_org == True:
-			result['status'] = 200
-			result['message'] = ('Created: ' + npath + '\n' +
-									'Kept Original: ' + filepath)
-			del password; del passlex; return result
+			result['status'] = response['status']
+			result['message'] = response['message'] + ' (original retained).'
+			del password; return result
 
 		try:
 			os.remove(filepath)
 			result['status'] = 200
-			result['message'] = ('Created: ' + npath + '\n' +
-								'Removed: ' + filepath)
+			result['message'] = response['message'] + ' (original deleted).'
 		except:
 			result['status'] = 400
-			result['message'] = ('Created: ' + npath + '\n' +
-								'Error Removing: ' + filepath)
-
-		del password; del passlex; return result
-
-	def encrypt_all_files(self, wd, password, extension=None,
-					decrypt=False,keep_org=False,naked=False):
-		filepaths = dc.get_files(wd, extension=extension)
-
-		if len(filepaths) <= 0: return 'Error: No files found.'
-
-		result = {}
-
-		for filepath in filepaths:
-			filenm = dc._get_pathnm(filepath)
-			result[filenm] = self.encrypt_file(filepath,password,
-							decrypt=decrypt,keep_org=keep_org,naked=naked)
-			print(result[filenm]['message'])
-
-		self.timetravel_folders(wd)
+			result['message'] = response['message'] + ' (Error deleting original).'
 
 		del password; return result
 
-	def load_config_old(self,wd):
-		"""Config file structure:
-			{'target_dir': '/dir/test', 'file_names': {
-				'name1': 'linked_name1',
-				'name2': 'linked_name2'}}
-		"""
-		config_file_path = join(wd,'config')
+	def encrypt_all_files(self, password, wd, extension=None,
+					decrypt=False,keep_org=False,naked=False):
+		filepaths = dc.get_files(wd, extension=extension)
+		if len(filepaths) <= 0: del password; return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 
-		if isfile(config_file_path) != True:
-			return {'status': 400, 'message': 'No config file found.'}
+		output = [self.encrypt_file(password,filepath,
+					decrypt=decrypt,keep_org=keep_org,naked=naked)['message'] for filepath in filepaths]
 
-		config_file = dc.read_file(config_file_path)
-
-		if len(config_file) == 0:
-			return {'status': 400, 'message': 'Config file empty.'}
-
-		try:
-			config = json.loads(''.join(config_file))
-		except:
-			return {'status': 400, 'message': 'Config file not structured correctly.'}
-
-		if 'target_dir' not in config or 'file_names' not in config:
-			return {'status': 400, 'message': 'target_dir and file_names not found in config file.'}
-
-		if type(config['file_names']) is not dict:
-			return {'status': 400, 'message': 'file_names is not of type dict in config file.'}
-
-		return {'status': 200, 'message': 'Config file loaded successfully.',
-				'data': config}
-
-class EncryptionGUI:
-
-	def __init__(self, scrambler, instance):
-		self.scrambler = scrambler
-		self.instance = instance
-
-	def optionscreen(self, decrypt=False):
-		if decrypt == True:
-			keyword = 'DECRYPT'
+		timetravel = self.timetravel_folders(wd)
+		if timetravel['status'] != 200 or len(timetravel['output']) == 0:
+			output.append('Error timetravelling folders, timetravelling skipped.')
 		else:
-			keyword = 'ENCRYPT'
+			for o in timetravel['output']: output.append(o)
 
-		print('What would you like to {}?'.format(keyword))
-		print('[1] A Message, [2] A File, [3] All Files, [4] Columns in a Dataframe')
-
-	def option_enc_msg(self, decrypt=False):
-		if decrypt == True:
-			keyword = 'decrypt'
-			additional_needed = ', your salt, and your password.'
-		else:
-			keyword = 'encrypt'
-			additional_needed = ' and a password.'
-
-		cmd.cls()
-		print('Please provide the message you want to {}{}'.format(keyword,additional_needed))
-		print(' ')
-		message = input('Input your message: ')
-		if message == '': cmd.cls(); print('Exited, no action taken.'); return
-		print(' ')
-
-		if decrypt == True:
-			try:
-				salt = self.scrambler._extract_salt(message)
-			except:
-				salt = input('Input your salt: ')
-				if salt == '': cmd.cls(); print('Salt cannot be blank, no action taken.'); return
-				print(' ')
-		else:
-			salt = None
-
-		password = getpass('Please enter password: ')
-		if password == '': cmd.cls(); print('Password cannot be blank, no action taken.'); return
-
-		if decrypt == True:
-			confirm = password
-		else:
-			print(' ')
-			confirm = getpass('Please confirm password: ')
-
-		cmd.cls()
-		if password != confirm: del password; del confirm; print('Password mismatch, no action taken.'); return
-
-		result = self.scrambler.encrypt_msg(message,password,salt,decrypt)
-		if result['status'] != 200: print(result['message']); return
-
-		print('Status: successfully {}ed!'.format(keyword))
-		print(' ')
-		print('==== Output Details ====')
-		print(' ')
-
-		if decrypt == True:
-			print('message: {}'.format(result['output']['hash']))
-			print(' ')
-			print('salt: {}'.format(result['output']['salt']))
-		else:
-			print('hash: {}'.format(self.scrambler._prepend_salt(result)))
-			print(' ')
-			print('Important: Salt is prepended after the "." at the end of the hash. Store it safely.')
-
-		print(' ')
-		del password; del confirm
-		input()
-		cmd.cls()
-		return
-
-	def option_enc_file(self, decrypt, keep_org, naked=False, all=False):
-		wd = self.instance.wd
-		extension = self.instance.extension
-
-		if decrypt == True:
-			keyword = 'decrypt'
-			keywording = 'Decrypting'
-		else:
-			keyword = 'encrypt'
-			keywording = 'Encrypting'
-
-		if wd == None: cmd.cls(); print('Error: No directory set. Please set directory.'); return
-		print(' ')
-
-		if all == True:
-			print('Are you sure you want to {} all {} files in the following [y/n]:'.format(
-					keyword,extension))
-			print(wd)
-			print(' ')
-			response = input(); cmd.cls()
-			if response != 'y': print('Exited, no action taken.'); return
-			if isdir(wd) != True: print('Invalid path, no action taken.'); return
-			print(keywording + ' all ' + extension + ' in: ' + wd)
-		else:
-			print('Which file do you want to {}?'.format(keyword))
-			filepath = input()
-			if filepath == '': cmd.cls(); print('Exited, no action taken.'); return
-			print(' ')
-			print('Are you sure you want to {} the following [y/n]:'.format(keyword))
-			print(filepath)
-			print(' ')
-			response = input(); cmd.cls()
-			if response != 'y': print('Exited, no action taken.'); return
-			if isfile(filepath) != True: print('Invalid file, no action taken.'); return
-			print(keywording + ': ' + filepath)
-
-		print(' ')
-		password = getpass('Please enter password: ')
-		if password == '': cmd.cls(); print('Password cannot be blank, no action taken.'); return
-
-		if decrypt == True:
-			confirm = password
-		else:
-			print(' ')
-			confirm = getpass('Please confirm password: ')
-
-		cmd.cls()
-		if password != confirm: del password; del confirm; print('Password mismatch, no action taken.'); return
-
-		print('{} started...'.format(keywording))
-
-		if all == True:
-			result = self.scrambler.encrypt_all_files(wd,password,extension=extension,
-									decrypt=decrypt,keep_org=keep_org,naked=naked)
-		else:
-			result = self.scrambler.encrypt_file(filepath,password,
-										decrypt=decrypt,keep_org=keep_org,naked=naked)
-			print(result['message'])
-
-		print(' ')
-		print('{} complete.'.format(keywording))
-		print(' ')
-		del password; del confirm
-		input()
-		cmd.cls()
-		return
-
-	def run(self, decrypt):
-		cmd.cls()
-
-		while True:
-			self.optionscreen(decrypt)
-			select = input()
-
-			if select not in ('1','2','3','4'):
-				#'[1] A Message, [2] A File, [3] All Files, [4] Columns in a Dataframe'
-				cmd.cls()
-				print('Invalid selection. Try again.')
-				break
-
-			if select == '1':
-				self.option_enc_msg(decrypt=decrypt)
-				break
-
-			if select == '2':
-				if decrypt == True:
-					self.option_enc_file(decrypt=decrypt,keep_org=True,naked=True)
-				else:
-					self.option_enc_file(decrypt=decrypt,keep_org=True)
-				break
-
-			if select == '3':
-				if decrypt == True:
-					self.option_enc_file(decrypt=decrypt,keep_org=False,all=True)
-				else:
-					self.option_enc_file(decrypt=decrypt,keep_org=False,all=True)
-				break
-
-			if select == '4':
-				cmd.cls()
-				print('Feature not yet available, no action taken.')
-				break
+		del password; return {'status': 200, 'message': 'Encrypt all files complete.', 'output': output}
 
 class ScramblerGUI:
 
-	def __init__(self, scrambler, instance, encryptiongui):
+	def __init__(self, scrambler, instance, encryptiongui, stashgui):
 		self.scrambler = scrambler
 		self.instance = instance
 		self.encryptiongui = encryptiongui
-		self.config = None
-
-	def install_config(self):
-		self.instance.set_cwd_as_wd()
-		self.config = self.scrambler.load_config_old(self.instance.wd)
-		if self.config['status'] == 200:
-			print('(Config file installed.)')
-		return self.config
+		self.stashgui = stashgui
 
 	def splashscreen(self):
-		cmd.cls()
+		cmd.clear()
 		print('Welcome to the Scrambler!')
 
 	def optionscreen(self):
 		print(' ')
 		print('What would you like to do?')
-		print('(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (r) Retrieve, (t) Timetravel, (q) Quit')
+		print('(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit')
 
-	def wipscreen(self):
-		cmd.cls()
+	def comingsoon(self):
+		cmd.clear()
 		print('Feature not yet available, no action taken.')
 
 	def option_s(self):
 		print(' ')
-		print('Which directory do you want to set?')
-		wd = input()
-		cmd.cls()
-
-		if os.path.isdir(wd) != True:
-			print('Invalid path, no action taken.')
-		else:
-			print('Directory set: ' + self.instance.set_wd(wd))
-
+		print('What directory do you want to set as your working directory?')
+		raw_wd = input()
+		cmd.clear()
+		setwd = self.instance.set_wd(raw_wd)
+		print(setwd['message'])
 		return
 
-	def option_st(self,inverse=False):
-		has_config = False; target_dir = ''
-		input_file_names = ''; output_file_names = ''
-
-		if type(self.config) is dict and self.config['status'] == 200:
-			has_config = True
-			target_dir = self.config['data']['target_dir']
-
-		# Get rid of the manual option ONLY allow the config option.
-		if inverse == True:
-			keywording = 'Retrieve'
-			target_msg = 'Which directory are you retrieving the target files from?'
-			confirm_msg = 'Are you sure you want to retrieve your files to the following [y/n]:'
-		else:
-			keywording = 'Stashing'
-			target_msg = 'Which directory are the target files located that you want to stash?'
-			confirm_msg = 'Are you sure you want to output your stashed files to the following [y/n]:'
-
+	def option_t(self):
+		cmd.clear()
 		if self.instance.wd == None:
-			cmd.cls()
-			print('Error: No directory set. Please set directory.')
-			return
+			print('Error: No working directory set. Please set working directory first.'); return
 
-		if has_config == False:
-			print(' ')
-			print('What do you want the name of your output file to be?')
-			output_file_names = input()
-
-			if output_file_names == '':
-				cmd.cls()
-				print('Exited, no action taken.')
-				return
-
-			print(' ')
-			print('What is the name of your target file?')
-			input_file_names = input()
-
-			if input_file_names == '':
-				cmd.cls()
-				print('Exited, no action taken.')
-				return
-
-			print(' ')
-			print(target_msg)
-			target_dir = input()
-
-			if target_dir == '':
-				cmd.cls()
-				print('Exited, no action taken.')
-				return
-
-		print(' ')
-		print(confirm_msg)
-
-		if inverse == True:
-			print(target_dir)
-		else:
-			print(self.instance.wd)
-
-		response = input()
-		cmd.cls()
-
-		if response == 'y':
-			if os.path.isdir(self.instance.wd) == True:
-				print('{} started...'.format(keywording))
-
-				if has_config == True:
-					print(self.scrambler.stash_all(
-						wd = self.instance.wd,
-						config_data = self.config['data'],
-						inverse = inverse))
-				else:
-					if inverse == True:
-						print(self.scrambler.stash(
-							input_file_names = input_file_names,
-							output_file_names = output_file_names,
-							old_dir = self.instance.wd,
-							new_dir = target_dir,
-							inverse=True))
-					else:
-						print(self.scrambler.stash(
-							input_file_names = input_file_names,
-							output_file_names = output_file_names,
-							old_dir = target_dir,
-							new_dir = self.instance.wd))
-				print(' ')
-				input()
-				cmd.cls()
-			else:
-				print('Invalid path, no action taken.')
-		else:
-			print('Exited, no action taken.')
-
-	def option_t(self, extension):
-		if self.instance.wd == None: cmd.cls(); print('Error: No directory set. Please set directory.'); return
-
-		print(' ')
-		print('Are you sure you want to timetravel the following [y/n]: ')
+		print('Warning: You are about to timetravel all files and folders in the following directory and its subdirectories.')
+		print('Timetravel will alter the metadata to a scrambled date/time in the past of everything in:')
 		print(self.instance.wd)
 		print(' ')
-
-		response = input(); cmd.cls()
-
-		if response != 'y': print('Exited, no action taken.'); return
-		if os.path.isdir(self.instance.wd) != True: print('Invalid path, no action taken.'); return
+		print('You may specify a file type to timetravel. Leave blank for default .txt files.')
+		print('Use * to timetravel all files regardless of type (this can be dangerous).')
+		print(' ')
+		raw_extension = input('Specify a file type [Optional]: ')
+		extension = self.scrambler.formatted_ext(raw_extension)
+		print(' ')
+		if extension == None:
+			confirm = input('Are you sure you want to timetravel all folders and files of all types [y/n]: ')
+		else:
+			confirm = input('Are you sure you want to timetravel all folders and files with extension {} [y/n]: '.format(extension))
+		cmd.clear()
+		if confirm != 'y': print('Exited, no action taken.'); return
+		if isdir(self.instance.wd) != True: print('Invalid path, no action taken.'); return
 
 		print('Timetravel started...')
-		self.scrambler.timetravel_files(self.instance.wd, extension=extension)
-		self.scrambler.timetravel_folders(self.instance.wd)
-		print('Timetravel complete.')
+		tt_files = self.scrambler.timetravel_files(self.instance.wd, extension=extension)
+		if tt_files['status'] != 200 or len(tt_files['output']) == 0:
+			print('No files found to timetravel, no action taken.')
+		else:
+			for f in tt_files['output']: print(f)
+
+		tt_folders = self.scrambler.timetravel_folders(self.instance.wd)
+		if tt_folders['status'] != 200 or len(tt_folders['output']) == 0:
+			print('No folders found to timetravel, no action taken.')
+		else:
+			for folder in tt_folders['output']: print(folder)
+
 		print(' ')
-		input()
-		cmd.cls()
-		return
+		print('Timetravel complete.')
+		input(); cmd.clear(); return
 
 	def option_pwd(self):
-		cmd.cls()
-		if self.instance.wd == None: 
-			print('Error: No directory set. Please set directory.')
-
-		print('Current directory: {}'.format(cmd.pwd()))
+		cmd.clear()
+		if self.instance.wd == None:
+			print('Error: No working directory set. Please set working directory first.'); return
+		else:
+			print('Working directory: {}'.format(cmd.pwd())); return
 
 	def option_ls(self):
-		cmd.cls()
-		if self.instance.wd == None: print('Error: No directory set. Please set directory.')
+		cmd.clear()
+		if self.instance.wd == None:
+			print('Error: No working directory set. Please set working directory first.'); return
 
 		ls = cmd.ls()
 
 		if len(ls) == 0:
-			print('Directory is empty.')
+			print('Working directory is empty.'); return
 		else:
-			print(' '.join(ls))
-
-		return
+			print(' '.join(ls)); return
 
 	def run(self):
-		cmd.cls()
+		cmd.clear()
 		self.splashscreen()
-		self.install_config()
 
 		while True:
 			self.optionscreen()
 			select = input()
 
-			if select not in ['q','pwd','ls','s','e','d','st','r','t','q']:
-				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (r) Recall, (t) Timetravel, (q) Quit'
-				cmd.cls(); print('Invalid selection. Try again.')
+			if select not in ('q','pwd','ls','s','e','d','st','t','q'):
+				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit'
+				cmd.clear(); print('Invalid selection. Try again.')
 
 			if select == 'q':
-				cmd.cls()
+				cmd.clear()
 				break
 
 			if select == 'pwd':
@@ -753,10 +362,7 @@ class ScramblerGUI:
 				self.encryptiongui.run(decrypt=True)
 
 			if select == 'st':
-				self.wipscreen()
-
-			if select == 'r':
-				self.wipscreen()
+				self.stashgui.run()
 
 			if select == 't':
-				self.option_t(extension=self.instance.extension)
+				self.option_t()

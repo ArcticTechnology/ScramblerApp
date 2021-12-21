@@ -61,17 +61,17 @@ class FileModder:
 		return dc.get_files(wd, extension)
 
 	@classmethod
-	def add_tag(self, filepath, options_old, options_new, newtag, no_ext=False):
+	def add_tag(self, filepath, newtag, curr_tag_options=[], new_tag_options=[]):
 
-		extension = '' if no_ext == True else dc._get_extension(filepath)
-		prefix = dc._get_prefix(filepath)
+		extension = dc.get_extension(filepath)
+		prefix = dc.get_prefix(filepath)
 
-		oldtag = '-' + prefix.split('-')[-1]
+		current_tag = '-' + prefix.split('-')[-1]
 
-		if oldtag in options_new:
+		if current_tag in new_tag_options:
 			return filepath
 
-		if oldtag in options_old:
-			return prefix.split(oldtag)[0] + newtag + extension
+		if current_tag in curr_tag_options:
+			return prefix.split(current_tag)[0] + newtag + extension
 		else:
 			return prefix + newtag + extension

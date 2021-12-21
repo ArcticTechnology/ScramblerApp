@@ -1,5 +1,4 @@
 import unittest
-
 from unittest import TestCase
 from configparser import ConfigParser
 

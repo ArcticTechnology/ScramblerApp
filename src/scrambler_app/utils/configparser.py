@@ -1,92 +1,110 @@
-import os
-import sys
-import json
+import os; import sys; import json
+from .dircrawler import DirCrawler as dc
+from .encryption import OpenSSLEncyptor as ossl
 
 class ConfigParser:
 
-	def __init__(self, scrambler):
-		self.scrambler = scrambler
+	def __init__(self):
 		self.build_loc = 'ScramblerApp/config'
 		self.dev_loc = 'config'
 		self.path_type = None
 		self.rootpath = None
 		self.filepath = None
 		self.filename = None
+		self.load_config()
 
-	def _find(self, filename): #filename should be .config or .config-c
-		build_rootpath = os.path.abspath(os.path.join(sys.prefix, self.build_loc))
-		build_filepath = os.path.abspath(os.path.join(build_rootpath, filename))
+	def _find(self, filename):
+		build_rootpath = dc.joinpath(sys.prefix, self.build_loc)
+		build_filepath = dc.joinpath(build_rootpath, filename)
 		build_exists = os.path.exists(build_filepath)
 
-		dev_rootpath = os.path.abspath(os.path.join(os.path.dirname(
+		dev_rootpath = dc.joinpath(os.path.dirname(
 			os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-			self.dev_loc))
-		dev_filepath = os.path.abspath(os.path.join(dev_rootpath, filename))
+			self.dev_loc)
+		dev_filepath = dc.joinpath(dev_rootpath, filename)
 		dev_exists = os.path.exists(dev_filepath)
 
 		if build_exists == True:
 			self.path_type = 'build'
 			self.rootpath = build_rootpath
 			self.filepath = build_filepath
+			self.filename = filename
 		elif dev_exists == True:
 			self.path_type = 'dev'
 			self.rootpath = dev_rootpath
 			self.filepath = dev_filepath
+			self.filename = filename
 		else:
-			self.path_type = None
-			self.rootpath = None
+			self.path_type = 'build'
+			self.rootpath = build_rootpath
 			self.filepath = None
+			self.filename = None
 
 	def _find_config_file(self):
-		possible_names = ['.config-c', '.config', '.config-d']
-
+		possible_names = ['.config-c', '.config', '.config-d', '.config-NAKED']
 		for name in possible_names:
 			self._find(name)
 			if self.filepath != None:
-				self.filename = name
-				break
+				return {'status': 200, 'message': 'Find config complete.'}
+		return {'status': 400, 'message': 'Error: no config found.'}
 
-	def _hasContent(self):
+	def hasContent(self):
 		if self.filepath == None: return False
 		if os.stat(self.filepath).st_size > 0:
 			return True
 		else:
 			return False
 
-	def _hasEncyptedTag(self):
+	def hasEncyptedTag(self):
 		if self.filename == '.config-c':
 			return True
 		else:
 			return False
 
-	def get_config(self, password=None, needs_enc=False):
-		result = {'status': None, 'message': None, 'output': None}
+	def load_config(self):
 		self._find_config_file()
+		has_content = self.hasContent()
+		if has_content == True: 
+			return {'status': 200,
+					'message': 'Load config file complete.'}
+		else:
+			return {'status': 400,
+					'message': 'Error: config file not found or empty.'}
 
-		if self._hasContent() != True:
-			result['status'] = 400
-			result['message'] = 'Error: config file not found or empty.'
-			return result
+	def parse(self, password=None):
+		has_enctag = self.hasEncyptedTag()
 
-		if self._hasEncyptedTag() == True and password==None:
-			result['status'] = 400
-			result['message'] = 'Error: config file requires password to read.'
-			return result
+		try:
+			file_content = ''.join(dc.read_file(self.filepath))
+		except:
+			return {'status': 400,
+						'message': 'Error: config file could not be read.', 'output': None}
 
-		if self._hasEncyptedTag():
-			# Try to Read and decrypt the message using openssl
-			self.scrambler.encrypt_file(self.filepath,password,
-					decrypt=True,keep_org=True,naked=False)
+		if has_enctag == True and password == None:
+			return {'status': 400,
+				'message': 'Error: config file requires password to read.', 'output': None}
 
-		# else: 
-		### Try to Read
-		### if needs_enc == True, encrypt the config file, delete the existing file.
-			self.scrambler.encrypt_file(self.filepath,password,
-					decrypt=False,keep_org=False,naked=False)
+		if has_enctag == True and password != None:
+			data = {'medium': 'text', 'input': file_content, 'outpath': None}
+			response = ossl.encrypt(password, data, decrypt=True)
 
+			if response['status'] != 200: return response
 
-#	def get_config(self):
-		#with open(path, 'r') as f:
-		#	return json.load(f)
-#		return self.file
+			try:
+				result = json.loads(response['output'])
+				return {'status': 200, 'message': 'Read config file complete.',
+						'output': result}
+			except:
+				return {'status': 400,
+					'message': response['message'],
+					'output': None}
 
+		if has_enctag == False:
+			try:
+				result = json.loads(file_content)
+				return {'status': 200, 'message': 'Read config file complete.',
+						'output': result}
+			except:
+				return {'status': 400,
+					'message': 'Error: config file not structured correctly.',
+					'output': None}

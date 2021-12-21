@@ -1,6 +1,7 @@
 import os;
 import shlex; import subprocess
 from os.path import isfile, isdir
+from .dircrawler import DirCrawler as dc
 
 class CommonCmd:
 
@@ -10,11 +11,11 @@ class CommonCmd:
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		returncode = process.returncode
+		result = dc.stdpath(process.stdout.decode().rstrip('\n'))
 		if returncode == 0:
-			return process.stdout.decode().rstrip('\n')
+			return result
 		else:
-			return ('Error printing directory.' + '\n' +
-					'Error Code: ' + process.stderr.decode())
+			return 'Error unable to print working directory.'
 
 	@classmethod
 	def ls(self):
@@ -25,21 +26,20 @@ class CommonCmd:
 		return folders + files
 
 	@classmethod
-	def cls(self):
+	def clear(self):
 		os.system('cls' if os.name=='nt' else 'clear')
 
 	@classmethod
-	def cp_file(self,localfilepath,newfilepath):
+	def copyfile(self,curr_filepath,new_filepath):
 
-		lfilelex = shlex.quote(localfilepath)
-		nfilelex = shlex.quote(newfilepath)
+		cfilelex = shlex.quote(curr_filepath)
+		nfilelex = shlex.quote(new_filepath)
 
-		command = shlex.split('cp {l} {n}'.format(l=lfilelex,n=nfilelex))
+		command = shlex.split('cp {c} {n}'.format(c=cfilelex,n=nfilelex))
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		returncode = process.returncode
 		if returncode == 0:
-			return 'File created: ' + newfilepath
+			return {'status': 200, 'message': 'File created: ' + new_filepath}
 		else:
-			return ('Error creating file for: ' + localfilepath + '\n' +
-					'Error Code: ' + process.stderr.decode())
+			return {'status': 400, 'message': 'Error creating file for: ' + curr_filepath}

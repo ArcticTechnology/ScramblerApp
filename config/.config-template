@@ -1,0 +1,6 @@
+{"origin_dir": "/home/origin_directory/",
+"stash_dir": "/home/stash_directory/",
+"stash_key": {
+"filename1": "stashed_filename1",
+"filename2": "stashed_filename2",
+"filename3": "stashed_filename3"}}
