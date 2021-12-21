@@ -3,7 +3,7 @@ The Scrambler is a terminal based app that makes it easy to secure and/or obfusc
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
-Preview of encrypt with gif
+![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/master/doc/scrambler-preview.gif?raw=true)
 
 ## Installation
 This library is hosted on PyPi and can be installed via ```pip```:
@@ -17,11 +17,12 @@ This app is designed for Linux, but can work on Windows and Mac, via the Git Bas
 ./main.py
 ```
 This will bring up the main menu as follows:
-preview of the main menu
+
+![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/master/doc/scrambler-mainmenu.png?raw=true)
 
 ## Documentation
 
-The idea is the have an easy way to ....
+The idea is the have an easy way to encrypt and decrypt stuff.
 
 ### Set Dir
 lets you set the workind directory works for natively for linux paths. Should work for windows and mac as well. Acceptable directory format examples:
