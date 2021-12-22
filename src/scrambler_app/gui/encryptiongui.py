@@ -56,7 +56,7 @@ class EncryptionGUI:
 		if decrypt == True:
 			print('secret: {}'.format(result['output']))
 		else:
-			print('hash: {}'.format(result['output']))
+			print('cipher: {}'.format(result['output']))
 		print(' ')
 		print('Press any key to exit.')
 		del password; del confirm

@@ -1,4 +1,3 @@
-import glob
 from setuptools import setup
 from setuptools import find_packages
 
@@ -22,13 +21,13 @@ setup(
 	#- MAJOR VERSION 0
 	#- MINOR VERSION 1
 	#- MAINTENANCE VERSION 0
-	version='0.0.0',
+	version='0.1.0',
 
 	license='MIT',
 
 	# Define a small description of the library. This appears
 	# when someone searches for the library on https://pypi.org/search.
-	description='A python starter package to be used as a template for creating your own python packages.',
+	description='Encrypt and/or obfuscate messages, files, and data.',
 
 	# Define a long description which is set to README file.
 	long_description=long_description,
@@ -48,7 +47,7 @@ setup(
 	python_requires='>=3.8',
 
 	# Define the keywords of the library.
-	keywords='starter, package, template',
+	keywords='cryptography, encryption, security',
 
 	# Define the package dir.
 	package_dir={'': 'src'},
@@ -56,14 +55,13 @@ setup(
 	# Define the packages to "build."
 	packages=find_packages(where='src'),
 
-	# Define whether any package data should be included like photos and JSON files.
-	#include_package_data = True,
-	#package_data = {
-	#	'data': ['data/data.json'],
-	#},
+	# Define whether any package data should be included like sample data, etc.
+	package_data = {
+		'config': ['config/.config-template'],
+	},
 
-	# Define any data_files that should be included like config and message catalogs.
-	data_files=[('ScramblerApp/config', glob.glob('config/*'))],
+	# Define any data files that should be included like config, message catalogs, environmental variables.
+	### data_files=[('PythonStarterPackage/config', glob.glob('config/*'))],
 
 	# Define any scripts that should be included.
 	entry_points={
@@ -75,10 +73,9 @@ setup(
 	# For a complete list go to https://pypi.org/classifiers/.
 	classifiers=[
 		# Define phase of development the library is in.
-		'Development Status :: 3 - Alpha',
-		#'Development Status :: 4 - Beta',
+		#'Development Status :: 3 - Alpha',
+		'Development Status :: 4 - Beta',
 		#'Development Status :: 5 - Production/Stable',
-
 
 		# Define the audience this library is intended for.
 		'Intended Audience :: Developers',
