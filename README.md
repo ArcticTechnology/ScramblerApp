@@ -1,5 +1,5 @@
 # Scrambler App
-The Scrambler is a terminal based encryption app that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. This tool is primarily intended for Linux, but works on Windows and Mac using the Git Bash (https://git-scm.com/downloads).
+The Scrambler is a Python based encryption app that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. This tool is primarily intended for Linux, but works on Windows and Mac using the Git Bash (https://git-scm.com/downloads).
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
@@ -12,7 +12,7 @@ pip3 install ScramblerApp
 ```
 
 ## Usage
-This app is designed for Linux, but can work on Windows and Mac, via the Git Bash terminal: ```https://git-scm.com/downloads```. After installation, you can run this app in your terminal with this command:
+This app is designed for the Linux terminal, but can work on Windows and Mac, via the Git Bash terminal: ```https://git-scm.com/downloads```. After installation, you can run this app in your terminal with this command:
 ```
 scramblerapp
 ```
@@ -43,7 +43,7 @@ The Scrambler app utilizes OpenSSL AES-256-CBC specification with PBKDF2 to encr
 ```
 cipher: U2FsdGVkX19/HGbvp3mtaqzuLiqdIEXfpYLCxIhJDf8=
 ```
-The password is: ```abcdef1234567890```.
+* The password is: ```abcdef1234567890```.
 
 2. A File - The Scrambler can also password encrypt/decrypt a file. Simply specify the name of a file in your working directory and a password. You can also provide Scrambler with full path of a file if you would like to action a file not in your working directory.
 * Encrypt will add a "-c" to the end of the file name before the file extension (if any); for example: ```example-c.txt```.
