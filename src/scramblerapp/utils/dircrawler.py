@@ -24,20 +24,20 @@ class DirCrawler:
 			return abspath(join(path, filename))
 
 	@classmethod
-	def get_filenm(self,path):
+	def get_filenm(self, path):
 		result = self.stdpath(path)
 		return result.split('/')[-1]
 
 	@classmethod
-	def get_prefix(self,filepath):
+	def get_prefix(self, filepath):
 		return os.path.splitext(filepath)[0]
 
 	@classmethod
-	def get_extension(self,filepath):
+	def get_extension(self, filepath):
 		return os.path.splitext(filepath)[-1]
 
 	@classmethod
-	def get_folders(self,wd,fix=True):
+	def get_folders(self, wd, fix=True):
 
 		dpaths = []
 
@@ -54,7 +54,7 @@ class DirCrawler:
 		return dpaths
 
 	@classmethod
-	def get_files(self,wd,extension=None,fix=True):
+	def get_files(self, wd, extension=None, fix=True):
 
 		filepaths = []
 
@@ -89,14 +89,14 @@ class DirCrawler:
 			pass
 
 	@classmethod
-	def read_last_line(self,filepath):
+	def read_last_line(self, filepath):
 		with open(filepath,'rb') as f:
 			self._get_last_line(f)
 			last_line = '\n' + f.readline().decode(errors='replace')
 			return last_line
 
 	@classmethod
-	def read_line(self,filepath,linenum):
+	def read_line(self, filepath, linenum):
 		with open(filepath,'r') as f:
 			for n, line in enumerate(f):
 				if n == linenum:
@@ -104,7 +104,7 @@ class DirCrawler:
 		return None
 
 	@classmethod
-	def read_file(self,filepath):
+	def read_file(self, filepath):
 		lines = []
 		with open(filepath,'r') as f:
 			for line in f:

@@ -1,4 +1,4 @@
-import os; import random; import json
+import os; import random;
 import shlex; import subprocess
 from os.path import isfile, isdir, exists
 from .utils.dircrawler import DirCrawler as dc

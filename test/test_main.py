@@ -1,10 +1,7 @@
-from .scrambler import Scrambler, ScramblerGUI
-from .gui.encryptiongui import EncryptionGUI
-from .gui.stashgui import StashGUI
-from .utils.instance import Instance
-from .utils.configparser import ConfigParser
+#!/usr/bin/python3 -B
+from scramblerapp import *
 
-def handler():
+def main():
 	scrambler = Scrambler()
 	instance = Instance()
 	configparser = ConfigParser()
@@ -12,3 +9,6 @@ def handler():
 	stashgui = StashGUI(scrambler, instance, configparser)
 	scramblergui = ScramblerGUI(scrambler, instance, encryptiongui, stashgui)
 	scramblergui.run()
+
+if __name__ == '__main__':
+	raise SystemExit(main())
