@@ -338,7 +338,7 @@ class ScramblerGUI:
 			self.optionscreen()
 			select = input()
 
-			if select not in ('q','pwd','ls','s','e','d','st','t','q'):
+			if select not in ('s','e','d','st','t','q','pwd','ls'):
 				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit'
 				cmd.clear(); print('Invalid selection. Try again.')
 

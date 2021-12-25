@@ -1,9 +1,26 @@
 # Scrambler App
-The Scrambler is a Python based encryption app that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. This tool is primarily intended for Linux, but works on Windows and Mac using the Git Bash (https://git-scm.com/downloads).
+The Scrambler is a Python based encryption app that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. This tool is primarily intended for Linux, but works on Windows and Mac using Git Bash (https://git-scm.com/downloads) and OpenSSL (comes with Git Bash by default).
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
 ![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/master/doc/scrambler-preview.gif?raw=true)
+
+## Prerequisites
+The Scrambler app is intended for the Linux terminal and should work on it out of the box. For Windows and Mac its recommended to run this on the Git Bash terminal. Here are the instructions for installing and setting up Git Bash:
+
+1. Go to https://git-scm.com/downloads and click download.
+```
+Version >= 2.34.1
+```
+2. During the installation setup, make sure to include OpenSSH. Recommenced setting should be fine:
+```
+Use bundled OpenSSH - This uses ssh.exe that comes with Git.
+```
+3. Leave the other settings as default, click through, and install.
+
+IMPORTANT: For Windows, run this app on the ```bash.exe``` terminal rather ```git-bash.exe```. There is a known issue with ```git-bash.exe``` messing up Python ```os``` commands in ```import os```. See this thread for details: https://stackoverflow.com/questions/33622087/composer-installation-error-output-is-not-a-tty-input-is-not-a-tty/33623136#33623136.
+* ```bash.exe``` can be found in your Git folder in the ```bin/``` directory.
+* For example: If ```git-bash.exe``` is here ```C:\Program Files\Git\git-bash.exe``` then you should find ```bash.exe``` here ```C:\Program Files\Git\bin\bash.exe```.
 
 ## Installation
 This library is hosted on PyPi and can be installed via ```pip```:
@@ -12,7 +29,7 @@ pip3 install ScramblerApp
 ```
 
 ## Usage
-This app is designed for the Linux terminal, but can work on Windows and Mac, via the Git Bash terminal: ```https://git-scm.com/downloads```. After installation, you can run this app in your terminal with this command:
+This app is designed for the Linux terminal, but can work on Windows and Mac, via the Git Bash terminal. After installation, you can run this app in your terminal with this command:
 ```
 scramblerapp
 ```
@@ -49,12 +66,12 @@ cipher: U2FsdGVkX19/HGbvp3mtaqzuLiqdIEXfpYLCxIhJDf8=
 * Encrypt will add a "-c" to the end of the file name before the file extension (if any); for example: ```example-c.txt```.
 * Decrypting an encrypted file will add a "-NAKED" at the end: ```example-NAKED.txt```.
 
-3. All Files - You can also encrypt/decrypt all files in a specified directory and its subdirectories. To do this, set a working directory, then select Encrypt or Decrypt > All Files. The Scrambler will crawl through your working directory and its subdirectory and attempt to encrypt every file it finds. You also have the option to specify a file type to encrypt. This will restrain the app to only action files of that specific type. The Scrambler default to the .txt file type. Use * to encrypt all files regardless of type. 
+3. All Files - You can also encrypt/decrypt all files in a specified directory and its subdirectories. To do this, set a working directory, then select Encrypt or Decrypt > All Files. The Scrambler will crawl through your working directory and its subdirectory and attempt to encrypt every file it finds. You also have the option to specify a file type to encrypt. This will restrain the app to only action files of that specific type. The Scrambler default to the .txt file type. Use * to encrypt all files regardless of type.
 
 3. Columns in a Dataframe - Lastly, you can encrypt specific pieces of data in a dataframe. Oftentimes you may have a data frame where only specific columns have sensitive information. This app allows you to encrypt those columns without altering the rest of the data set. Currently, this feature is not available.
 
 ### Stash
-The Scrambler app also allows you to obfiscate files through the stash feature. Stash allows you to map files to alias names and a pre-defined location. Then the Scrambler will alter the name and move it to the pre-defined location, and then scramble the metadata of the files and directories to hide the file. At any time, Scrambler can retrieve the stashed files by providing a password. In order to use stash you have to setup a config file that tells the Scrambler where to send your stashed files to and what their new names will be.
+The Scrambler app also allows you to obfuscate files through the stash feature. Stash allows you to map files to alias names and a pre-defined location. Then the Scrambler will alter the name and move it to the pre-defined location, and then scramble the metadata of the files and directories to hide the file. At any time, Scrambler can retrieve the stashed files by providing a password. In order to use stash you have to setup a config file that tells the Scrambler where to send your stashed files to and what their new names will be.
 
 Instructions on creating a config file:
 1. Create your .config based off of .config-template in this repository. The .config file follows JSON formatting and should contain these pieces of data:
@@ -74,11 +91,11 @@ Instructions on creating a config file:
 ```
 C:/Users/username/AppData/Local/Python3/ScramblerApp/config
 ```
-3. Highly recommended: Password encrypt this .config file with the Scrambler app. This will create .config-c which is still recongnizable by Scrambler.
-4. Highly recommended: Once you have the encrypted version (.config-c) you can delete the original .config file as it is no longer needed. You defeat the purpose of an ecrypted config file if the unencrypted version is still lying around. Note if stash detects an unencrypted version, you can choose to have stash encrypt it for you which will automatically delete the original. 
+3. Highly recommended: Password encrypt this .config file with the Scrambler app. This will create .config-c which is still recognizable by Scrambler.
+4. Highly recommended: Once you have the encrypted version (.config-c) you can delete the original .config file as it is no longer needed. You defeat the purpose of an encrypted config file if the unencrypted version is still lying around. Note if stash detects an unencrypted version, you can choose to have stash encrypt it for you which will automatically delete the original.
 
 ### Timetravel
-Timetravel is another obfiscation feature of the Scrambler app. Timetravel alter the metadata of all files and folders in a directory and subdirectories. Specifically it forces their date and time metadatas to be scrambled to some time in the past. This makes it so that you will not be able to determine when a file or folder was last touched or altered. To do this, simply set a working directory and run timetravel. The Scrambler will crawl through the working directory and its subdirectory and attempt to scramble the metadata of every file and folder it finds.
+Timetravel is another obfuscation feature of the Scrambler app. Timetravel alter the metadata of all files and folders in a directory and subdirectories. Specifically it forces their date and time metadatas to be scrambled to some time in the past. This makes it so that you will not be able to determine when a file or folder was last touched or altered. To do this, simply set a working directory and run timetravel. The Scrambler will crawl through the working directory and its subdirectory and attempt to scramble the metadata of every file and folder it finds.
 
 ### Conclusion
 With the Scrambler, you can now secure your messages, files, and data. Easily password encrypt sensitive information and obfuscate important files from view. Hope you enjoy.
@@ -89,4 +106,3 @@ Our software is open source and free for public use. If you found any of these r
 Bitcoin Address 1: 1GZQY6hMwszqxCmbC6uGxkyD5HKPhK1Pmf
 
 ![alt text](https://github.com/ArcticTechnology/BitcoinAddresses/blob/master/btcaddr1.png?raw=true)
-

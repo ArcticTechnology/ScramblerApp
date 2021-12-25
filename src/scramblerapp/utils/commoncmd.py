@@ -27,7 +27,7 @@ class CommonCmd:
 
 	@classmethod
 	def clear(self):
-		os.system('cls' if os.name=='nt' else 'clear')
+		os.system('clear')
 
 	@classmethod
 	def copyfile(self,curr_filepath,new_filepath):
