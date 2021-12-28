@@ -38,3 +38,4 @@ integration/js/temp
 integration/kite-allure-reports
 integration/logs
 tmp/
+venv/
