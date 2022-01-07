@@ -4,6 +4,17 @@ from .crawler import Crawler
 class FileModder:
 
 	@classmethod
+	def format_ext(self, raw_extension, ifblank='.txt', ifstar=None):
+		if raw_extension == '*':
+			return ifstar
+		if raw_extension == '':
+			return ifblank
+		if raw_extension[0] != '.':
+			return '.' + raw_extension
+		else:
+			return raw_extension
+
+	@classmethod
 	def add_msg(self, filepath, msg):
 		indent_msg = '\n' + msg
 		if Crawler.read_last_line(filepath) != indent_msg:

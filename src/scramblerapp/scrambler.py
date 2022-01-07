@@ -8,16 +8,6 @@ from .utils.encryption import OpenSSLEncyptor as ossl
 
 class Scrambler:
 
-	def formatted_ext(self, raw_extension):
-		if raw_extension == '*':
-			return None
-		if raw_extension == '':
-			return '.txt'
-		if raw_extension[0] != '.':
-			return '.' + raw_extension
-		else:
-			return raw_extension
-
 	def timetravel(self,path,hours_ago=None):
 		if hours_ago == None: hours_ago = random.randrange(1,121000)
 
@@ -284,7 +274,7 @@ class ScramblerGUI:
 		print('Use * to timetravel all files regardless of type (this can be dangerous).')
 		print(' ')
 		raw_extension = input('Specify a file type [Optional]: ')
-		extension = self.scrambler.formatted_ext(raw_extension)
+		extension = FileModder.format_ext(raw_extension, ifblank='.txt')
 		print(' ')
 		if extension == None:
 			confirm = input('Are you sure you want to timetravel all folders and files of all types [y/n]: ')
