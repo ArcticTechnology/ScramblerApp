@@ -1,5 +1,5 @@
 import os; import sys; import json
-from .dircrawler import DirCrawler as dc
+from ..dircrawler.crawler import Crawler
 from .encryption import OpenSSLEncyptor as ossl
 
 class ConfigParser:
@@ -14,14 +14,14 @@ class ConfigParser:
 		self.load_config()
 
 	def _find(self, filename):
-		build_rootpath = dc.joinpath(sys.prefix, self.build_loc)
-		build_filepath = dc.joinpath(build_rootpath, filename)
+		build_rootpath = Crawler.joinpath(sys.prefix, self.build_loc)
+		build_filepath = Crawler.joinpath(build_rootpath, filename)
 		build_exists = os.path.exists(build_filepath)
 
-		dev_rootpath = dc.joinpath(os.path.dirname(
+		dev_rootpath = Crawler.joinpath(os.path.dirname(
 			os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
 			self.dev_loc)
-		dev_filepath = dc.joinpath(dev_rootpath, filename)
+		dev_filepath = Crawler.joinpath(dev_rootpath, filename)
 		dev_exists = os.path.exists(dev_filepath)
 
 		if build_exists == True:
@@ -75,7 +75,7 @@ class ConfigParser:
 		has_enctag = self.hasEncyptedTag()
 
 		try:
-			file_content = ''.join(dc.read_file(self.filepath))
+			file_content = ''.join(Crawler.read_file(self.filepath))
 		except:
 			return {'status': 400,
 						'message': 'Error: config file could not be read.', 'output': None}

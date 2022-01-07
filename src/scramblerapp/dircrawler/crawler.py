@@ -1,7 +1,7 @@
 import os;
 from os.path import isfile, isdir, join, abspath
 
-class DirCrawler:
+class Crawler:
 
 	@classmethod
 	def stdpath(self, path):

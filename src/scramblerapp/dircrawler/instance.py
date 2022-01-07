@@ -1,5 +1,5 @@
 import os
-from .dircrawler import DirCrawler as dc
+from .crawler import Crawler
 
 class Instance:
 
@@ -13,7 +13,7 @@ class Instance:
 	def set_wd(self,raw_wd):
 		if raw_wd == '': return {'status': 400,
 					'message': 'Invalid input, no action taken.'}
-		wd = dc.stdpath(raw_wd)
+		wd = Crawler.stdpath(raw_wd)
 		if os.path.isdir(wd) == False:
 			return {'status': 400, 'message': 'Invalid input, no action taken.'}
 		self.wd = wd
@@ -22,7 +22,7 @@ class Instance:
 
 	def set_cwd_as_wd(self):
 		curr_dir = os.getcwd()
-		wd = dc.stdpath(curr_dir)
+		wd = Crawler.stdpath(curr_dir)
 		if os.path.isdir(wd) == False:
 			return {'status': 400, 'message': 'Invalid input, no action taken.'}
 		self.wd = wd

@@ -8,5 +8,5 @@ __all__ = [
 from .scrambler import *
 from .gui.encryptiongui import *
 from .gui.stashgui import *
-from .utils.instance import *
+from .dircrawler.instance import *
 from .utils.configparser import *

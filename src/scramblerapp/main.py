@@ -2,7 +2,7 @@
 from .scrambler import Scrambler, ScramblerGUI
 from .gui.encryptiongui import EncryptionGUI
 from .gui.stashgui import StashGUI
-from .utils.instance import Instance
+from .dircrawler.instance import Instance
 from .utils.configparser import ConfigParser
 
 def main():

@@ -1,10 +1,10 @@
 import os; import random;
 import shlex; import subprocess
 from os.path import isfile, isdir, exists
-from .utils.dircrawler import DirCrawler as dc
-from .utils.encryption import OpenSSLEncyptor as ossl
-from .utils.filemodder import FileModder as fm
+from .dircrawler.crawler import Crawler
+from .dircrawler.filemodder import FileModder
 from .utils.commoncmd import CommonCmd as cmd
+from .utils.encryption import OpenSSLEncyptor as ossl
 
 class Scrambler:
 
@@ -35,7 +35,7 @@ class Scrambler:
 			return {'status': 400, 'message': 'Error timetravelling: ' + path}
 
 	def timetravel_files(self, dir, extension=None):
-		files = dc.get_files(dir, extension=extension)
+		files = Crawler.get_files(dir, extension=extension)
 
 		if len(files) <= 0: return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
 
@@ -43,7 +43,7 @@ class Scrambler:
 		return {'status': 200, 'message': 'Timetravel files complete.', 'output': output}
 
 	def timetravel_folders(self, dir):
-		folders = dc.get_folders(dir)
+		folders = Crawler.get_folders(dir)
 
 		if exists(dir) != True: return {'status': 400, 'message': 'Error timetravelling: no directory found.', 'output': []}
 
@@ -80,7 +80,7 @@ class Scrambler:
 			return errormsg + ' ' + sensitiveinfo
 
 	def stash(self, curr_filename, curr_dir, new_filename, new_dir, overwrite=False, remove=False, censored=True):
-		curr_filepath = dc.joinpath(curr_dir, curr_filename)
+		curr_filepath = Crawler.joinpath(curr_dir, curr_filename)
 		if exists(curr_filepath) != True: return {'status': 400,
 					'message': self._censor_stash_errors(
 						'Error: stash file was not found', curr_filepath, censored)}
@@ -89,7 +89,7 @@ class Scrambler:
 					'message': self._censor_stash_errors(
 						'Error: invalid stash file', curr_filepath, censored)}
 
-		new_filepath = dc.joinpath(new_dir, new_filename)
+		new_filepath = Crawler.joinpath(new_dir, new_filename)
 		if exists(new_filepath) == True and overwrite == False: return {'status': 400,
 					'message': self._censor_stash_errors(
 						'Error: stash file already exists', new_filepath, censored)}
@@ -178,10 +178,10 @@ class Scrambler:
 
 		if decrypt == True:
 			index = 1 if naked == True else 0
-			outpath = fm.add_tag(filepath,tag_options['decrypt'][index],
+			outpath = FileModder.add_tag(filepath,tag_options['decrypt'][index],
 								tag_options['encrypt'],tag_options['decrypt'])
 		else:
-			outpath = fm.add_tag(filepath,tag_options['encrypt'][0],
+			outpath = FileModder.add_tag(filepath,tag_options['encrypt'][0],
 								tag_options['decrypt'],tag_options['encrypt'])
 
 		if exists(filepath) == False:
@@ -227,7 +227,7 @@ class Scrambler:
 
 	def encrypt_all_files(self, password, wd, extension=None,
 					decrypt=False,keep_org=False,naked=False):
-		filepaths = dc.get_files(wd, extension=extension)
+		filepaths = Crawler.get_files(wd, extension=extension)
 		if len(filepaths) <= 0: del password; return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 
 		output = [self.encrypt_file(password,filepath,

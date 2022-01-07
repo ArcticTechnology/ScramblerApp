@@ -1,7 +1,7 @@
 import os;
 import shlex; import subprocess
 from os.path import isfile, isdir
-from .dircrawler import DirCrawler as dc
+from ..dircrawler.crawler import Crawler
 
 class CommonCmd:
 
@@ -11,7 +11,7 @@ class CommonCmd:
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		returncode = process.returncode
-		result = dc.stdpath(process.stdout.decode().rstrip('\n'))
+		result = Crawler.stdpath(process.stdout.decode().rstrip('\n'))
 		if returncode == 0:
 			return result
 		else:

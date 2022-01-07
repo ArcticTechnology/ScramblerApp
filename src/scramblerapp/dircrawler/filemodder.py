@@ -1,12 +1,12 @@
 import os
-from .dircrawler import DirCrawler as dc
+from .crawler import Crawler
 
 class FileModder:
 
 	@classmethod
 	def add_msg(self, filepath, msg):
 		indent_msg = '\n' + msg
-		if dc.read_last_line(filepath) != indent_msg:
+		if Crawler.read_last_line(filepath) != indent_msg:
 			with open(filepath,'a') as f:
 				f.write(indent_msg)
 			return 'Added message: ' + filepath
@@ -16,12 +16,12 @@ class FileModder:
 	@classmethod
 	def rm_msg(self, filepath, msg):
 		indent_msg = '\n' + msg
-		if dc.read_last_line(filepath) == indent_msg:
+		if Crawler.read_last_line(filepath) == indent_msg:
 			with open(filepath,'rb+') as f:
-				dc.get_last_line(f)
+				Crawler.get_last_line(f)
 				f.truncate()
 			with open(filepath,'rb+') as f:
-				dc.get_last_line(f)
+				Crawler.get_last_line(f)
 				f.truncate()
 			return 'Removed message: ' + filepath
 		else:
@@ -29,7 +29,7 @@ class FileModder:
 
 	@classmethod
 	def write_msg_all(self, wd, msg='secret-msg', extension=None, remove=True):
-		filepaths = dc.get_files(wd, extension=extension)
+		filepaths = Crawler.get_files(wd, extension=extension)
 
 		if len(filepaths) <= 0:
 			return 'No files found.'
@@ -48,7 +48,7 @@ class FileModder:
 		if extension == None or '.' not in extension:
 			return 'No extension found.'
 
-		filepaths = dc.get_files(wd, extension=None)
+		filepaths = Crawler.get_files(wd, extension=None)
 
 		if len(filepaths) <= 0:
 			return 'No files found.'
@@ -58,13 +58,13 @@ class FileModder:
 				os.rename(filepath, filepath+extension)
 				print('Renamed: ' + str(filepath))
 
-		return dc.get_files(wd, extension)
+		return Crawler.get_files(wd, extension)
 
 	@classmethod
 	def add_tag(self, filepath, newtag, curr_tag_options=[], new_tag_options=[]):
 
-		extension = dc.get_extension(filepath)
-		prefix = dc.get_prefix(filepath)
+		extension = Crawler.get_extension(filepath)
+		prefix = Crawler.get_prefix(filepath)
 
 		current_tag = '-' + prefix.split('-')[-1]
 
