@@ -39,11 +39,11 @@ pip3 install ScramblerApp
 ```
 
 ## Usage
-This app is designed for the Linux terminal, but can work on Windows and Mac, via the Git Bash terminal. After installation, you can run this app in your terminal with this command:
+After installation, you can run this app in your terminal with this command:
 ```
 scramblerapp
 ```
-You can also run it with ```python3 -m```:
+You can also run with the python command ```python3 -m```:
 ```
 python3 -m scramblerapp
 ```

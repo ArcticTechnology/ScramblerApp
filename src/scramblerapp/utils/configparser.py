@@ -5,7 +5,7 @@ from .encryption import OpenSSLEncyptor as ossl
 class ConfigParser:
 
 	def __init__(self):
-		self.build_loc = 'ScramblerApp/config'
+		self.build_loc = 'scramblerapp/config'
 		self.dev_loc = 'config'
 		self.path_type = None
 		self.rootpath = None

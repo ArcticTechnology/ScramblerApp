@@ -252,6 +252,25 @@ class ScramblerGUI:
 		cmd.clear()
 		print('Feature not yet available, no action taken.')
 
+	def option_pwd(self):
+		cmd.clear()
+		if self.instance.wd == None:
+			print('Error: No working directory set. Please set working directory first.'); return
+		else:
+			print('Working directory: {}'.format(cmd.pwd())); return
+
+	def option_ls(self):
+		cmd.clear()
+		if self.instance.wd == None:
+			print('Error: No working directory set. Please set working directory first.'); return
+
+		ls = cmd.ls()
+
+		if len(ls) == 0:
+			print('Working directory is empty.'); return
+		else:
+			print(' '.join(ls)); return
+
 	def option_s(self):
 		print(' ')
 		print('What directory do you want to set as your working directory?')
@@ -301,25 +320,6 @@ class ScramblerGUI:
 		print('Timetravel complete.')
 		input(); cmd.clear(); return
 
-	def option_pwd(self):
-		cmd.clear()
-		if self.instance.wd == None:
-			print('Error: No working directory set. Please set working directory first.'); return
-		else:
-			print('Working directory: {}'.format(cmd.pwd())); return
-
-	def option_ls(self):
-		cmd.clear()
-		if self.instance.wd == None:
-			print('Error: No working directory set. Please set working directory first.'); return
-
-		ls = cmd.ls()
-
-		if len(ls) == 0:
-			print('Working directory is empty.'); return
-		else:
-			print(' '.join(ls)); return
-
 	def run(self):
 		cmd.clear()
 		self.splashscreen()
@@ -328,7 +328,7 @@ class ScramblerGUI:
 			self.optionscreen()
 			select = input()
 
-			if select not in ('s','e','d','st','t','q','pwd','ls'):
+			if select not in ('pwd','ls','s','e','d','st','t','q'):
 				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit'
 				cmd.clear(); print('Invalid selection. Try again.')
 

@@ -1,7 +1,7 @@
 import os
 from .crawler import Crawler
 
-class FileModder:
+class FileModder: #move read file from crawler to here.
 
 	@classmethod
 	def format_ext(self, raw_extension, ifblank='.txt', ifstar=None):

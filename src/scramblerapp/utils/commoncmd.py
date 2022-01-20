@@ -15,7 +15,7 @@ class CommonCmd:
 		if returncode == 0:
 			return result
 		else:
-			return 'Error unable to print working directory.'
+			return 'Error: unable to print working directory.'
 
 	@classmethod
 	def ls(self):
