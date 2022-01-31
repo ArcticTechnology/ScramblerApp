@@ -43,7 +43,7 @@ After installation, you can run this app in your terminal with this command:
 ```
 scramblerapp
 ```
-You can also run with the python command ```python3 -m```:
+You can also run it with the python command ```python3 -m```:
 ```
 python3 -m scramblerapp
 ```
