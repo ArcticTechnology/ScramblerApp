@@ -3,7 +3,7 @@ The Scrambler is a Python based encryption app that makes it easy to secure and/
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
-![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/master/doc/scrambler-preview.gif?raw=true)
+![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/main/doc/scrambler-preview.gif?raw=true)
 
 ## Prerequisites
 The Scrambler app is intended for the Linux terminal and should work on it out of the box. However, you may need to add ```~/.local/bin/``` to PATH if you are getting a ```command not found``` error when trying to run the app. See this thread for details: https://stackoverflow.com/a/34947489. To add ```~/.local/bin/``` to PATH do the following:
@@ -49,7 +49,7 @@ python3 -m scramblerapp
 ```
 This will bring up the main menu as follows:
 
-![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/master/doc/scrambler-mainmenu.png?raw=true)
+![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/main/doc/scrambler-mainmenu.png?raw=true)
 
 ## Documentation
 The purpose of this app is to make it easy to secure messages, files, and data either through encryption and/or through obfuscation. This guide will go over the different functions within the app.
@@ -115,4 +115,4 @@ Our software is open source and free for public use. If you found any of these r
 
 Bitcoin Address 1: 1GZQY6hMwszqxCmbC6uGxkyD5HKPhK1Pmf
 
-![alt text](https://github.com/ArcticTechnology/BitcoinAddresses/blob/master/btcaddr1.png?raw=true)
+![alt text](https://github.com/ArcticTechnology/BitcoinAddresses/blob/main/btcaddr1.png?raw=true)
