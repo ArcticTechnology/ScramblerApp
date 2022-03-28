@@ -40,12 +40,12 @@ class EncryptionGUI:
 		else:
 			if len(password) <= 15:
 				cmd.clear(); print('Password must be 16 characters or more, no action taken.')
-				del password; return
+				return
 			print(' ')
 			confirm = getpass('Please confirm password: ')
 
 		cmd.clear()
-		if password != confirm: del password; del confirm; print('Password mismatch, no action taken.'); return
+		if password != confirm: print('Password mismatch, no action taken.'); return
 
 		result = self.scrambler.encrypt_msg(password,message,decrypt)
 		if result['status'] != 200: print(result['message']); return
@@ -59,7 +59,6 @@ class EncryptionGUI:
 			print('cipher: {}'.format(result['output']))
 		print(' ')
 		print('Press any key to exit.')
-		del password; del confirm
 		input(); cmd.clear(); return
 
 	def option_enc_file(self, decrypt, keep_org, naked=False, all=False):
@@ -128,7 +127,7 @@ class EncryptionGUI:
 			confirm = getpass('Please confirm password: ')
 
 		cmd.clear()
-		if password != confirm: del password; del confirm; print('Password mismatch, no action taken.'); return
+		if password != confirm: print('Password mismatch, no action taken.'); return
 
 		print('{} started...'.format(keywordion))
 
@@ -146,7 +145,6 @@ class EncryptionGUI:
 
 		print(' ')
 		print('{} complete.'.format(keywordion))
-		del password; del confirm
 		input(); cmd.clear(); return
 
 	def run(self, decrypt):

@@ -1,58 +1,52 @@
 # Scrambler App
-The Scrambler is a Python based encryption app that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. This tool is primarily intended for Linux, but works on Windows and Mac using Git Bash (https://git-scm.com/downloads) and OpenSSL (comes with Git Bash by default).
+The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 to encrypt contents. See the "Documentation" section below for more details.
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
 ![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/main/doc/scrambler-preview.gif?raw=true)
 
 ## Prerequisites
-The Scrambler app is intended for the Linux terminal and should work on it out of the box. However, you may need to add ```~/.local/bin/``` to PATH if you are getting a ```command not found``` error when trying to run the app. See this thread for details: https://stackoverflow.com/a/34947489. To add ```~/.local/bin/``` to PATH do the following:
-1. Add ```export PATH=~/.local/bin:$PATH``` to ```~/.bash_profile```.
-```
-echo export PATH=~/.local/bin:$PATH > ~/.bash_profile
-````
-2. Execute command.
-```
-source ~/.bash_profile
-```
+For Windows, it is recommended to run this app on a Linux emulation layer such as the Git Bash terminal. See the "Instructions for Git Bash" section for details. In addition to Git Bash you will also need to install Python3 and Pip3 as described below.
 
-This app can work for Windows and Mac. It is recommended to run it on the Git Bash terminal. Here are the instructions for installing and setting up Git Bash:
+For Mac and Linux, this app should work out of the box on the Linux or Mac terminal, but you must have Python3 and Pip3 as described below.
 
-1. Go to https://git-scm.com/downloads and click download.
-```
-Version >= 2.34.1
-```
-2. During the installation setup, make sure to include OpenSSH. Recommenced setting should be fine:
-```
-Use bundled OpenSSH - This uses ssh.exe that comes with Git.
-```
-3. Leave the other settings as default, click through, and install.
-
-IMPORTANT: For Windows, run this app on the ```bash.exe``` terminal rather ```git-bash.exe```. There is a known issue with ```git-bash.exe``` messing up Python ```os``` commands in ```import os```. See this thread for details: https://stackoverflow.com/questions/33622087/composer-installation-error-output-is-not-a-tty-input-is-not-a-tty/33623136#33623136.
-* ```bash.exe``` can be found in your Git folder in the ```bin/``` directory.
-* For example: If ```git-bash.exe``` is here ```C:\Program Files\Git\git-bash.exe``` then you should find ```bash.exe``` here ```C:\Program Files\Git\bin\bash.exe```.
+This app requires the following:
+* Python3 (version 3.8 or greater) - Install Python3 here: [https://www.python.org/downloads/]. Check version with: ```python3 --version```.
+* Pip3 (version 20.2.1 or greater) - Make sure to install python3-pip in order to use pip install. Check version with: ```pip3 --version```.
 
 ## Installation
-This library is hosted on PyPi and can be installed via ```pip```:
+There are a couple of options to install this app:
+* Pip Install - This app is hosted on PyPi and can be installed with the following command:
 ```
 pip3 install ScramblerApp
 ```
+* Local Install - Alternatively, you can download or git clone the Github repo and install it locally with the following:
+```
+git clone https://github.com/ArcticTechnology/ScramblerApp.git
+cd ScramblerApp
+pip3 install -e .
+```
+To uninstall this app:
+```
+pip3 uninstall ScramblerApp
+```
+* If you used the local install option, you will also want to delete the ```.egg-info``` file located in the ```src/``` directory of the package. This gets created automatically with ```pip3 install -e .```.
 
 ## Usage
-After installation, you can run this app in your terminal with this command:
+After installation, you have a couple ways to run this app.
+* Run this app from the terminal with this command:
 ```
 scramblerapp
 ```
-You can also run it with the python command ```python3 -m```:
+* Run this app with the python command ```python3 -m```:
 ```
 python3 -m scramblerapp
 ```
-This will bring up the main menu as follows:
-
+Either method should bring up the main menu which looks follows:
 ![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/main/doc/scrambler-mainmenu.png?raw=true)
 
 ## Documentation
-The purpose of this app is to make it easy to secure messages, files, and data either through encryption and/or through obfuscation. This guide will go over the different functions within the app.
+The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. This guide will go over the different functions within this app.
 
 ### Set Dir
 The Set Dir command allows you to set a working directory. In order to use most of the Scrambler's functions you will need to have a working directory set. This lets the Scrambler know which files and folders to use. For example, when encrypting a file in your working directory, you can simply pass the file name rather than the full path of the file.
@@ -64,11 +58,11 @@ The Scrambler works natively for linux paths. However, it should also work for w
 * ```C:\documents\myfolder```
 
 ### Encrypt and Decrypt
-The Scrambler app utilizes OpenSSL AES-256-CBC specification with PBKDF2 to encrypt content. OpenSSL is an open-source software library that allows applications that secure communications over computer networks. Its available for most Unix-like operating systems such as Linux and macOS as well as Microsoft Windows. See this wiki for more detail: https://en.wikipedia.org/wiki/OpenSSL. The AES-256-CBC specification with PBKDF2 is the encryption standard for using a password to encrypt and decrypt data. For more detail on AES see this wiki: https://en.wikipedia.org/wiki/Advanced_Encryption_Standard. Also see this wiki for PBKDF2: https://en.wikipedia.org/wiki/PBKDF2. The following will describe the different content that the Scrambler can encrypt and decrypt.
+The Scrambler app utilizes OpenSSL AES-256-CBC specification with PBKDF2 to encrypt content. OpenSSL is an open-source software library that allows applications that secure communications over computer networks. Its available for most Unix-like operating systems such as Linux and macOS as well as Microsoft Windows. See this wiki to learn more about OpenSSL: [https://en.wikipedia.org/wiki/OpenSSL]. The AES-256-CBC specification with PBKDF2 is the encryption standard for using a password to encrypt and decrypt data. For more detail on AES see this wiki: [https://en.wikipedia.org/wiki/Advanced_Encryption_Standard]. See also this wiki for documentation on encrypting with OpenSSL: [https://wiki.openssl.org/index.php/Enc]. The following will describe the different content that the Scrambler can encrypt and decrypt.
 
 1. A Message - The scrambler has the ability perform a simple password encrypt / decrypt on messages. Here is an example below. Try decrypting the following encrypted message with the Scrambler app.
 ```
-cipher: U2FsdGVkX19/HGbvp3mtaqzuLiqdIEXfpYLCxIhJDf8=
+cipher: U2FsdGVkX193YXQOuyQJZuxxEeR3AJe3lIVBxDMYBLA=
 ```
 * The password is: ```abcdef1234567890```.
 

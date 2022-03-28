@@ -158,7 +158,7 @@ class Scrambler:
 	def encrypt_msg(self, password, message, decrypt=False):
 		data = {'medium': 'text', 'input': message, 'outpath': None}
 		result = ossl.encrypt(password, data, decrypt)
-		del password; return result
+		return result
 
 	def encrypt_file(self, password, filepath,
 					decrypt=False, keep_org=False, naked=False):
@@ -177,17 +177,17 @@ class Scrambler:
 		if exists(filepath) == False:
 			result['status'] = 400
 			result['message'] = 'Error failed to find file: ' + filepath
-			del password; return result
+			return result
 
 		if exists(outpath) == True:
 			result['status'] = 400
 			result['message'] = 'Error output path already exists: ' + outpath
-			del password; return result
+			return result
 
 		if outpath == filepath:
 			result['status'] = 400
 			result['message'] = 'Action already performed on: ' + filepath
-			del password; return result
+			return result
 
 		data = {'medium': 'file', 'input': filepath, 'outpath': outpath}
 		response = ossl.encrypt(password, data, decrypt)
@@ -196,14 +196,14 @@ class Scrambler:
 				os.remove(outpath)
 			except:
 				pass
-			del password; return response
+			return response
 
 		self.timetravel(outpath)
 
 		if keep_org == True:
 			result['status'] = response['status']
 			result['message'] = response['message'] + ' (original retained).'
-			del password; return result
+			return result
 
 		try:
 			os.remove(filepath)
@@ -213,12 +213,12 @@ class Scrambler:
 			result['status'] = 400
 			result['message'] = response['message'] + ' (Error deleting original).'
 
-		del password; return result
+		return result
 
 	def encrypt_all_files(self, password, wd, extension=None,
 					decrypt=False,keep_org=False,naked=False):
 		filepaths = Crawler.get_files(wd, extension=extension)
-		if len(filepaths) <= 0: del password; return {'status': 400, 'message': 'Error: No files found.', 'output': []}
+		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 
 		output = [self.encrypt_file(password,filepath,
 					decrypt=decrypt,keep_org=keep_org,naked=naked)['message'] for filepath in filepaths]
@@ -229,7 +229,7 @@ class Scrambler:
 		else:
 			for o in timetravel['output']: output.append(o)
 
-		del password; return {'status': 200, 'message': 'Encrypt all files complete.', 'output': output}
+		return {'status': 200, 'message': 'Encrypt all files complete.', 'output': output}
 
 class ScramblerGUI:
 

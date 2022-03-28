@@ -52,11 +52,11 @@ class StashGUI:
 		if password == '': cmd.clear(); print('Password cannot be blank, no action taken.'); return
 		if len(password) <= 15: 
 			cmd.clear(); print('Password must be 16 characters or more, no action taken.')
-			del password; return
+			return
 		print(' ')
 		confirm = getpass('Please confirm password: ')
 		cmd.clear()
-		if password != confirm: del password; del confirm; print('Password mismatch, no action taken.'); return
+		if password != confirm: print('Password mismatch, no action taken.'); return
 
 		print('Encryption started...')
 		result = self.scrambler.encrypt_file(password,filepath,
@@ -65,7 +65,6 @@ class StashGUI:
 		print(' ')
 		print('Encryption complete.')
 		print(' ')
-		del password; del confirm
 		input(); cmd.clear(); return
 
 	def option_stash(self, inverse=False):
@@ -98,7 +97,7 @@ class StashGUI:
 			else:
 				print(parser['message'])
 			print(' '); print('Press any key to exit.')
-			del password; input(); cmd.clear()
+			input(); cmd.clear()
 			print('Exited. No action taken.')
 			return
 
@@ -108,7 +107,7 @@ class StashGUI:
 			print(' '); print('Error: config file formatted incorrectly.')
 			print('Your config file should be formatted like .config-template before encrypting it.')
 			print(' '); print('Press any key to exit.')
-			del password; input(); cmd.clear()
+			input(); cmd.clear()
 			print('Exited. No action taken.')
 			return
 
@@ -130,7 +129,7 @@ class StashGUI:
 		if response['status'] != 200:
 			print(' '); print(response['message'])
 			print(' '); print('Press any key to exit.')
-			del password; input(); cmd.clear()
+			input(); cmd.clear()
 			print('Exited. No action taken.')
 			return
 
