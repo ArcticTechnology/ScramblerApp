@@ -18,6 +18,7 @@ class EncryptionGUI:
 		print('[1] A Message, [2] A File, [3] All Files, [4] Columns in a Dataframe')
 
 	def option_enc_msg(self, decrypt=False):
+		pbkdf2 = self.instance.pbkdf2
 		if decrypt == True:
 			keyword = 'Decrypt'
 			pass_msg = 'Password: '
@@ -47,7 +48,7 @@ class EncryptionGUI:
 		cmd.clear()
 		if password != confirm: print('Password mismatch, no action taken.'); return
 
-		result = self.scrambler.encrypt_msg(password,message,decrypt)
+		result = self.scrambler.encrypt_msg(password,message,decrypt,pbkdf2)
 		if result['status'] != 200: print(result['message']); return
 
 		print('{}ion complete.'.format(keyword))
@@ -63,6 +64,7 @@ class EncryptionGUI:
 
 	def option_enc_file(self, decrypt, keep_org, naked=False, all=False):
 		wd = self.instance.wd
+		pbkdf2 = self.instance.pbkdf2
 
 		if decrypt == True:
 			keyword = 'decrypt'
@@ -133,14 +135,14 @@ class EncryptionGUI:
 
 		if all == True:
 			result = self.scrambler.encrypt_all_files(password,wd,extension=extension,
-							decrypt=decrypt,keep_org=keep_org,naked=naked)
+							decrypt=decrypt,pbkdf2=pbkdf2,keep_org=keep_org,naked=naked)
 			if result['status'] != 200:
 				print(result['message'])
 			else:
 				for output in result['output']: print(output)
 		else:
 			result = self.scrambler.encrypt_file(password,filename,
-							decrypt=decrypt,keep_org=keep_org,naked=naked)
+							decrypt=decrypt,pbkdf2=pbkdf2,keep_org=keep_org,naked=naked)
 			print(result['message'])
 
 		print(' ')

@@ -1,9 +1,12 @@
 #!/usr/bin/python3 -B
+from tkinter.filedialog import Open
 from .scrambler import Scrambler, ScramblerGUI
 from .gui.encryptiongui import EncryptionGUI
 from .gui.stashgui import StashGUI
 from .dircrawler.instance import Instance
 from .utils.configparser import ConfigParser
+
+from .utils.encryption import OpenSSLEncyptor
 
 def main():
 	scrambler = Scrambler()

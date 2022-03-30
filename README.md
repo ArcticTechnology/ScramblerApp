@@ -1,18 +1,21 @@
 # Scrambler App
-The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 to encrypt contents. See the "Documentation" section below for more details.
+The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. See the "Documentation" section below for more details.
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
 ![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/main/doc/scrambler-preview.gif?raw=true)
 
 ## Prerequisites
-For Windows, it is recommended to run this app on a Linux emulation layer such as the Git Bash terminal. See the "Instructions for Git Bash" section for details. In addition to Git Bash you will also need to install Python3 and Pip3 as described below.
+For Windows, it is recommended to run this app on a Linux emulation layer such as the Git Bash terminal. See the "Instructions for Git Bash" section for details. In addition to Git Bash, make sure you also have Python3, Pip3, and OpenSSL as described below.
 
-For Mac and Linux, this app should work out of the box on the Linux or Mac terminal, but you must have Python3 and Pip3 as described below.
+For Mac, this app should work on the Mac terminal. Mac typically comes with LibreSSL by default and this app is compatible with LibreSSL. However, LibreSSL is missing the key derivation: pbkdf2. It is recommended that you install and use OpenSSL instead. Make sure you also have Python3 and Pip3 as described below.
 
-This app requires the following:
+For Linux, this app should work out of the box on the Linux terminal, but make sure you also have Python3, Pip3, and OpenSSL as described below.
+
+Requirements:
 * Python3 (version 3.8 or greater) - Install Python3 here: [https://www.python.org/downloads/]. Check version with: ```python3 --version```.
 * Pip3 (version 20.2.1 or greater) - Make sure to install python3-pip in order to use pip install. Check version with: ```pip3 --version```.
+* OpenSSL (version 1.1.1 or greater) - See wiki for details: [https://en.wikipedia.org/wiki/OpenSSL]. Check version with: ```openssl version```.
 
 ## Installation
 There are a couple of options to install this app:
@@ -58,11 +61,11 @@ The Scrambler works natively for linux paths. However, it should also work for w
 * ```C:\documents\myfolder```
 
 ### Encrypt and Decrypt
-The Scrambler app utilizes OpenSSL AES-256-CBC specification with PBKDF2 to encrypt content. OpenSSL is an open-source software library that allows applications that secure communications over computer networks. Its available for most Unix-like operating systems such as Linux and macOS as well as Microsoft Windows. See this wiki to learn more about OpenSSL: [https://en.wikipedia.org/wiki/OpenSSL]. The AES-256-CBC specification with PBKDF2 is the encryption standard for using a password to encrypt and decrypt data. For more detail on AES see this wiki: [https://en.wikipedia.org/wiki/Advanced_Encryption_Standard]. See also this wiki for documentation on encrypting with OpenSSL: [https://wiki.openssl.org/index.php/Enc]. The following will describe the different content that the Scrambler can encrypt and decrypt.
+The Scrambler app utilizes OpenSSL AES-256-CBC specification with PBKDF2 to encrypt content. OpenSSL is an open-source software library that allows applications that secure communications over computer networks. Its available for most Unix-like operating systems such as Linux and macOS as well as Microsoft Windows. See this wiki to learn more about OpenSSL: [https://en.wikipedia.org/wiki/OpenSSL]. The AES-256-CBC specification with PBKDF2 is the encryption standard for using a password to encrypt and decrypt data. For more detail on AES see this wiki: [https://en.wikipedia.org/wiki/Advanced_Encryption_Standard]. See this wiki for documentation on encrypting with OpenSSL: [https://wiki.openssl.org/index.php/Enc]. See this wiki to learn more about PBKDF2: [https://en.wikipedia.org/wiki/PBKDF2]. The following will describe the different content that the Scrambler can encrypt and decrypt.
 
 1. A Message - The scrambler has the ability perform a simple password encrypt / decrypt on messages. Here is an example below. Try decrypting the following encrypted message with the Scrambler app.
 ```
-cipher: U2FsdGVkX193YXQOuyQJZuxxEeR3AJe3lIVBxDMYBLA=
+cipher: U2FsdGVkX1/2GRhgqsfjLUTxNpCrhe724CFnSydrrtM=
 ```
 * The password is: ```abcdef1234567890```
 

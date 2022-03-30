@@ -155,13 +155,13 @@ class Scrambler:
 		result['message'] = '{} completed.'.format(keyword)
 		return result
 
-	def encrypt_msg(self, password, message, decrypt=False):
+	def encrypt_msg(self, password, message, decrypt=False, pbkdf2=True):
 		data = {'medium': 'text', 'input': message, 'outpath': None}
-		result = ossl.encrypt(password, data, decrypt)
+		result = ossl.encrypt(password, data, decrypt, pbkdf2)
 		return result
 
 	def encrypt_file(self, password, filepath,
-					decrypt=False, keep_org=False, naked=False):
+					decrypt=False, pbkdf2=True, keep_org=False, naked=False):
 		result = {'status': None, 'message': None}
 		tag_options = {'encrypt' : ['-c'],
 			'decrypt' : ['-d', '-NAKED']}
@@ -190,7 +190,7 @@ class Scrambler:
 			return result
 
 		data = {'medium': 'file', 'input': filepath, 'outpath': outpath}
-		response = ossl.encrypt(password, data, decrypt)
+		response = ossl.encrypt(password, data, decrypt, pbkdf2)
 		if response['status'] == 400:
 			try:
 				os.remove(outpath)
@@ -216,12 +216,12 @@ class Scrambler:
 		return result
 
 	def encrypt_all_files(self, password, wd, extension=None,
-					decrypt=False,keep_org=False,naked=False):
+					decrypt=False, pbkdf2=True, keep_org=False, naked=False):
 		filepaths = Crawler.get_files(wd, extension=extension)
 		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 
-		output = [self.encrypt_file(password,filepath,
-					decrypt=decrypt,keep_org=keep_org,naked=naked)['message'] for filepath in filepaths]
+		output = [self.encrypt_file(password,filepath,decrypt=decrypt,pbkdf2=pbkdf2,
+					keep_org=keep_org,naked=naked)['message'] for filepath in filepaths]
 
 		timetravel = self.timetravel_folders(wd)
 		if timetravel['status'] != 200 or len(timetravel['output']) == 0:
@@ -244,6 +244,7 @@ class ScramblerGUI:
 		print('Welcome to the Scrambler!')
 
 	def optionscreen(self):
+		print('version: ' + self.instance.version_text)
 		print(' ')
 		print('What would you like to do?')
 		print('(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit')

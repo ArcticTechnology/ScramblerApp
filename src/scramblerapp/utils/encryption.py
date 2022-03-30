@@ -3,7 +3,26 @@ import shlex; import subprocess
 class OpenSSLEncyptor:
 
 	@classmethod
-	def encrypt(self, password: str, data: dict, decrypt=False):
+	def get_version(self):
+		c = 'openssl version'
+		command = shlex.split(c)
+		process = subprocess.run(command,
+			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+		returncode = process.returncode
+		if returncode != 0:
+			return {'status': 400, 'message': 'Error: Failed to load OpenSSL.', 'version': None}
+
+		message = process.stdout.decode().rstrip('\n')
+		version = message[:4].lower()
+		if version == 'open' or version == 'libr':
+			return {'status': 200, 'message': message[:26], 'version': version}
+		else:
+			return {'status': 400,
+				'message': 'Error, incompatible verison of OpenSSL: {}'.format(message),
+				'version': version}
+
+	@classmethod
+	def encrypt(self, password: str, data: dict, decrypt=False, pbkdf2=True):
 		"""
 		Example data inputs:
 		data = {'medium': 'file', 'input': '/filepath/example', 'outpath': '/example-c'}
@@ -17,9 +36,9 @@ class OpenSSLEncyptor:
 								'message': 'Error: Invalid medium.'}
 
 		passwd = shlex.quote(password)
-		dashd = ' -d' if decrypt == True else ''
+		_d = ' -d' if decrypt == True else ''
+		_pbkdf2 = ' -pbkdf2' if pbkdf2 == True else ''
 		keyword = 'Decrypt' if decrypt == True else 'Encrypt'
-		keywording = 'decrypting' if decrypt == True else 'encrypting'
 
 		if data['medium'] == 'text':
 			inputtext = data['input']
@@ -27,8 +46,8 @@ class OpenSSLEncyptor:
 				return {'status': 405, 'message': 'Error: Quote characters not allowed.'}
 			text = shlex.quote(data['input'])
 			pipetext = shlex.split('echo "{t}"'.format(t=text))
-			command = shlex.split('openssl aes-256-cbc{d} -a -salt -pass pass:{p}'.format(
-						d=dashd,p=passwd))
+			command = shlex.split('openssl aes-256-cbc{d} -a -salt{p} -pass pass:{pa}'.format(
+						d=_d,p=_pbkdf2,pa=passwd))
 
 			try:
 				pipe = subprocess.Popen(pipetext, stdout=subprocess.PIPE)
@@ -51,7 +70,7 @@ class OpenSSLEncyptor:
 				if decrypt == True:
 					result['message'] = 'Error: Decryption failed. Make sure your password is correct.'.format(keyword)
 				else:
-					result['message'] = 'Error: Encryption failed, could not encrypt file.'.format(keyword)
+					result['message'] = 'Error: Encryption failed, could not encrypt message.'.format(keyword)
 				return result
 
 		if data['medium'] == 'file':
@@ -61,8 +80,8 @@ class OpenSSLEncyptor:
 			except:
 				return {'status': 200, 'message': 'Error: Invalid medium.'}
 
-			c = 'openssl aes-256-cbc{d} -a -salt -in {f} -out {o} -pass pass:{p}'.format(
-							d=dashd,f=filepath,o=outpath,p=passwd)
+			c = 'openssl aes-256-cbc{d} -a -salt{p} -in {f} -out {o} -pass pass:{pa}'.format(
+							d=_d,p=_pbkdf2,f=filepath,o=outpath,pa=passwd)
 			command = shlex.split(c)
 			process = subprocess.run(command,
 							stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -75,5 +94,8 @@ class OpenSSLEncyptor:
 				return result
 			else:
 				result['status'] = 400
-				result['message'] = 'Error {}: '.format(keywording) + filepath
+				if decrypt == True:
+					result['message'] = 'Error: Decryption failed. Make sure your password is correct.'.format(keyword)
+				else:
+					result['message'] = 'Error: Encryption failed, could not encrypt file.'.format(keyword)
 				return result

@@ -1,4 +1,4 @@
-import os;
+import os
 import shlex; import subprocess
 from os.path import isfile, isdir
 from ..dircrawler.crawler import Crawler
