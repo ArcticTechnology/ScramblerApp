@@ -64,7 +64,7 @@ The Scrambler app utilizes OpenSSL AES-256-CBC specification with PBKDF2 to encr
 ```
 cipher: U2FsdGVkX193YXQOuyQJZuxxEeR3AJe3lIVBxDMYBLA=
 ```
-* The password is: ```abcdef1234567890```.
+* The password is: ```abcdef1234567890```
 
 2. A File - The Scrambler can also password encrypt/decrypt a file. Simply specify the name of a file in your working directory and a password. You can also provide Scrambler with full path of a file if you would like to action a file not in your working directory.
 * Encrypt will add a "-c" to the end of the file name before the file extension (if any); for example: ```example-c.txt```.
