@@ -15,7 +15,7 @@ class OpenSSLEncyptor:
 		message = process.stdout.decode().rstrip('\n')
 		version = message[:4].lower()
 		if version == 'open' or version == 'libr':
-			return {'status': 200, 'message': message[:26], 'version': version}
+			return {'status': 200, 'message': message[:27], 'version': version}
 		else:
 			return {'status': 400,
 				'message': 'Error, incompatible verison of OpenSSL: {}'.format(message),
