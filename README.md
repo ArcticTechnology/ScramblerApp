@@ -107,6 +107,48 @@ Timetravel is another obfuscation feature of the Scrambler app. Timetravel alter
 ### Conclusion
 With the Scrambler, you can now secure your messages, files, and data. Easily password encrypt sensitive information and obfuscate important files from view. Hope you enjoy.
 
+## Troubleshooting
+This section goes over some of the common issues found and how to resolve them.
+
+### "Command Not Found" Error When Running the App
+On Linux, if you are getting a ```command not found``` error when trying to run the app, you may need to add ```~/.local/bin/``` to PATH. See this thread for details: [https://stackoverflow.com/a/34947489]. To add ```~/.local/bin/``` to PATH do the following:
+
+1. Add ```export PATH=~/.local/bin:$PATH``` to ```~/.bash_profile```.
+```
+echo export PATH=~/.local/bin:$PATH > ~/.bash_profile
+```
+2. Execute command.
+```
+source ~/.bash_profile
+```
+
+### "ImportError: No module named 'tkinter'
+Your python version is probably missing tkinter which typically comes default. See this post for details [https://stackoverflow.com/a/25905642]. Install it with the following:
+```
+sudo apt-get install python3-tk
+```
+For Mac, use this:
+```
+brew install python-tk
+```
+
+### Instructions for Git Bash
+For Windows, it is recommended to run this app on a linux emulation layer like the Git Bash terminal. Here are the instructions for installing and setting up Git Bash:
+1. Go to https://git-scm.com/downloads and click download.
+```
+Version >= 2.34.1
+```
+2. During the installation setup, make sure to include OpenSSH. Recommenced setting should be fine:
+```
+Use bundled OpenSSH - This uses ssh.exe that comes with Git.
+```
+3. Leave the other settings as default, click through, and install.
+4. Open ```bash.exe``` and install Python3 https://www.python.org/downloads/
+5. Proceed to the "Installation" section to install this app.
+
+IMPORTANT: For Windows, use the ```bash.exe``` terminal rather ```git-bash.exe```. There is a known issue with ```git-bash.exe``` messing up Python ```os``` commands in ```import os```. See this thread for details: [https://stackoverflow.com/a/33623136].
+* You can find ```bash.exe``` Git folder in the ```bin/``` directory. For example: If ```git-bash.exe``` is here ```C:\Program Files\Git\git-bash.exe``` then you should find ```bash.exe``` here ```C:\Program Files\Git\bin\bash.exe```.
+
 ## Support and Contributions
 Our software is open source and free for public use. If you found any of these repos useful and would like to support this project financially, feel free to donate to our bitcoin address.
 
