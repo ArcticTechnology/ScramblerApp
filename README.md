@@ -81,7 +81,7 @@ cipher: U2FsdGVkX1/2GRhgqsfjLUTxNpCrhe724CFnSydrrtM=
 The Scrambler app also allows you to obfuscate files through the stash feature. Stash allows you to map files to alias names and a pre-defined location. Then the Scrambler will alter the name and move it to the pre-defined location, and then scramble the metadata of the files and directories to hide the file. At any time, Scrambler can retrieve the stashed files by providing a password. In order to use stash you have to setup a config file that tells the Scrambler where to send your stashed files to and what their new names will be.
 
 Instructions on creating a config file:
-1. Create your .config based off of .config-template in this repository. The .config file follows JSON formatting and should contain these pieces of data:
+1. Create your .config based off of config-example.txt file in this repository [https://github.com/ArcticTechnology/ScramblerApp/tree/main/config]. The .config file follows JSON formatting and should contain these pieces of data:
 ```
 {"origin_dir": "/home/origin_directory/",
 "stash_dir": "/home/stash_directory/",
