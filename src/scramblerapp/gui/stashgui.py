@@ -4,37 +4,37 @@ from ..utils.commoncmd import CommonCmd as cmd
 
 class StashGUI:
 
-	def __init__(self, scrambler, instance, configparser):
+	def __init__(self, scrambler, instance, configloader):
 		self.scrambler = scrambler
 		self.instance = instance
-		self.configparser = configparser
+		self.configloader = configloader
 
-	def noconfig_warning(self):
+	def noconfig_warning(self, warning):
 		cmd.clear()
-		print('Warning: Config file not found or empty. This is required to use Stash.')
+		print('{} This is required to use Stash.'.format(warning))
 		print(' ')
 		print('Instructions on creating a config file:')
 		print('1) Create your .config based off of the config-example.txt file.')
-		print('2) Place your .config file into {}'.format(self.configparser.rootpath))
+		print('2) Place your .config file into {}'.format(self.configloader.configloc))
 		print('3) [Optional] Encrypt your .config file with this app (this will create .config-c)')
 		print('4) [Optional] Delete your original .config file once .config-c is created')
 		print(' ')
-		print('See config-template.txt file as an example, located here:')
-		print('https://github.com/ArcticTechnology/ScramblerApp/tree/main/config')
+		print('See documentation for more details on how to use Stash:')
+		print('https://github.com/ArcticTechnology/ScramblerApp/blob/main/README.md#stash')
 		print(' ')
 		print('Press any key to exit.')
 		input(); cmd.clear(); return
 
 	def optionscreen(self):
-		if self.configparser.hasEncyptedTag() == False:
+		if self.configloader.hasEncyptedTag() == False:
 			print('Warning: Your .config does not appear to be encrypted! Be sure to encrypt it.')
 		print(' ')
 		print('What would you like to do?')
 		print('[1] Stash files, [2] Retrieve stashed files, [3] Encrypt config file.')
 
 	def option_enc_config(self):
-		filepath = self.configparser.filepath
-		if self.configparser.hasEncyptedTag() == True:
+		filepath = self.configloader.configfile
+		if self.configloader.hasEncyptedTag() == True:
 			cmd.clear()
 			print('No action taken, .config-c appears to be encrypted already:')
 			print(filepath)
@@ -48,10 +48,10 @@ class StashGUI:
 
 		print('Encrypting: ' + filepath)
 		print(' ')
-		password = getpass('Password (>=16 chars required): ')
+		password = getpass('Password (>10 chars required): ')
 		if password == '': cmd.clear(); print('Password cannot be blank, no action taken.'); return
-		if len(password) <= 15: 
-			cmd.clear(); print('Password must be 16 characters or more, no action taken.')
+		if len(password) < 10:
+			cmd.clear(); print('Password must greater than 10 characters, no action taken.')
 			return
 		print(' ')
 		confirm = getpass('Please confirm password: ')
@@ -67,7 +67,7 @@ class StashGUI:
 		print(' ')
 		input(); cmd.clear(); return
 
-	def option_stash(self, inverse=False):
+	def option_stash(self, retrieve=False):
 		"""
 		Data format:
 		{"origin_dir": "/home/origin_directory/",
@@ -78,7 +78,7 @@ class StashGUI:
 		"filename3": "stashed_filename3"}}
 		"""
 		print(' ')
-		if self.configparser.hasEncyptedTag():
+		if self.configloader.hasEncyptedTag():
 			print('Please enter the password to the .config-c file.')
 			print(' ')
 			password = getpass('Password: ')
@@ -87,7 +87,7 @@ class StashGUI:
 		else:
 			password = None
 
-		parser = self.configparser.parse(password)
+		parser = self.configloader.enc_parse(password)
 		if parser['status'] != 200:
 			cmd.clear(); print('Attempting to parse config file...')
 			print(' ')
@@ -112,7 +112,7 @@ class StashGUI:
 			return
 
 		if password != None: cmd.clear(); print('Password to .config-c accepted!'); print(' ')
-		if inverse == True:
+		if retrieve == True:
 			keyword = 'Retrieve'
 			print('Are you sure you want to retrieve your stashed files to the following directory? [y/n]')
 		else:
@@ -125,7 +125,7 @@ class StashGUI:
 		cmd.clear()
 		print('{} started...'.format(keyword))
 
-		response = self.scrambler.stash_all(data, inverse=inverse)
+		response = self.scrambler.stash_all(data, retrieve=retrieve)
 		if response['status'] != 200:
 			print(' '); print(response['message'])
 			print(' '); print('Press any key to exit.')
@@ -142,9 +142,9 @@ class StashGUI:
 
 	def run(self):
 		cmd.clear()
-		load = self.configparser.load_config()
+		load = self.configloader.load()
 		if load['status'] != 200:
-			self.noconfig_warning()
+			self.noconfig_warning(load['message'])
 			print('Exited. No action taken.')
 			return
 
@@ -162,7 +162,7 @@ class StashGUI:
 			return
 
 		if select == '2':
-			self.option_stash(inverse=True)
+			self.option_stash(retrieve=True)
 			return
 
 		if select == '3':

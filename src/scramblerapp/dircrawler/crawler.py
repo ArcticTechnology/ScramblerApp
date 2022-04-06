@@ -78,36 +78,3 @@ class Crawler:
 				result.append(filepath)
 
 		return result
-
-	@classmethod
-	def _get_last_line(self, openedFile):
-		try:
-			openedFile.seek(-2, os.SEEK_END)
-			while openedFile.read(1) != b'\n':
-				openedFile.seek(-2, os.SEEK_CUR)
-		except:
-			pass
-
-	@classmethod
-	def read_last_line(self, filepath):
-		with open(filepath,'rb') as f:
-			self._get_last_line(f)
-			last_line = '\n' + f.readline().decode(errors='replace')
-			return last_line
-
-	@classmethod
-	def read_line(self, filepath, linenum):
-		with open(filepath,'r') as f:
-			for n, line in enumerate(f):
-				if n == linenum:
-					return line.rstrip('\n')
-		return None
-
-	@classmethod
-	def read_file(self, filepath):
-		lines = []
-		with open(filepath,'r') as f:
-			for line in f:
-				if line[0] != '#':
-					lines.append(line.rstrip('\n'))
-		return lines

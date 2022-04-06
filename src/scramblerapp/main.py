@@ -1,19 +1,18 @@
 #!/usr/bin/python3 -B
-from tkinter.filedialog import Open
 from .scrambler import Scrambler, ScramblerGUI
 from .gui.encryptiongui import EncryptionGUI
 from .gui.stashgui import StashGUI
-from .dircrawler.instance import Instance
-from .utils.configparser import ConfigParser
+from .gui.instance import Instance
+from .dircrawler.configloader import ConfigLoader
 
-from .utils.encryption import OpenSSLEncyptor
+from .utils.encryption import OpenSSLEncyptor as ossl
 
 def main():
 	scrambler = Scrambler()
 	instance = Instance()
-	configparser = ConfigParser()
+	configloader = ConfigLoader()
 	encryptiongui = EncryptionGUI(scrambler, instance)
-	stashgui = StashGUI(scrambler, instance, configparser)
+	stashgui = StashGUI(scrambler, instance, configloader)
 	scramblergui = ScramblerGUI(scrambler, instance, encryptiongui, stashgui)
 	scramblergui.run()
 

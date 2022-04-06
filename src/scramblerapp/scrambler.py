@@ -63,26 +63,34 @@ class Scrambler:
 		if len(keys) != len(values): return True
 		return False
 
-	def _censor_stash_errors(self, errormsg, sensitiveinfo, censored=True):
-		if censored == True:
-			return errormsg + '. Please check your config file.'
-		else:
-			return errormsg + ' ' + sensitiveinfo
-
-	def stash(self, curr_filename, curr_dir, new_filename, new_dir, overwrite=False, remove=False, censored=True):
+	def stash(self, curr_filename, curr_dir, new_filename, new_dir, overwrite=False, remove=False, retrieve=False):
 		curr_filepath = Crawler.joinpath(curr_dir, curr_filename)
-		if exists(curr_filepath) != True: return {'status': 400,
-					'message': self._censor_stash_errors(
-						'Error: stash file was not found', curr_filepath, censored)}
+		result = {'status': None, 'message': None}
 
-		if isfile(curr_filepath) != True: return {'status': 400,
-					'message': self._censor_stash_errors(
-						'Error: invalid stash file', curr_filepath, censored)}
+		if exists(curr_filepath) != True:
+			result['status'] = 400
+			if retrieve == True:
+				result['message'] = 'Error: Retrieval failed, specified file not found in stashed directory.'
+			else:
+				result['message'] = 'Error: File not found {}'.format(curr_filepath)
+			return result
+
+		if isfile(curr_filepath) != True: 
+			result['status'] = 400
+			if retrieve == True:
+				result['message'] = 'Error: Retrieval failed, specified file in stashed directory is corrupt.'
+			else:
+				result['message'] = 'Error: File is corrupt {}'.format(curr_filepath)
+			return result
 
 		new_filepath = Crawler.joinpath(new_dir, new_filename)
-		if exists(new_filepath) == True and overwrite == False: return {'status': 400,
-					'message': self._censor_stash_errors(
-						'Error: stash file already exists', new_filepath, censored)}
+		if exists(new_filepath) == True and overwrite == False:
+			result['status'] = 400
+			if retrieve == True:
+				result['message'] = 'Error: File already exists {}'.format(new_filepath)
+			else:
+				result['message'] = 'Error: Stash failed, file already exists in stashed directory.'
+			return result
 
 		response = cmd.copyfile(curr_filepath,new_filepath)
 		if response['status'] != 200: return response
@@ -91,11 +99,13 @@ class Scrambler:
 			try:
 				os.remove(curr_filepath)
 			except:
-				return {'status': 400, 'message': self._censor_stash_errors(
-						'Error: failed to remove stash file', curr_filepath, censored)}
+				if retrieve == True:
+					result['message'] = 'Error: Failed to remove file from stashed directory'
+				else:
+					result['message'] = 'Error: Failed to remove {}'.format(curr_filepath)
 		return response
 
-	def stash_all(self, data, inverse=False):
+	def stash_all(self, data, retrieve=False):
 		"""
 		Data format:
 		{"origin_dir": "/home/origin_directory/",
@@ -110,10 +120,10 @@ class Scrambler:
 		stash_dir = data['stash_dir']
 
 		if isdir(origin_dir) == False: return {'status': 400,
-				'message': 'Error: could not find origin directory {}'.format(origin_dir), 'output': []}
+				'message': 'Error: Could not find origin directory {}'.format(origin_dir), 'output': []}
 
 		if isdir(stash_dir) == False: return {'status': 400,
-				'message': 'Error: could not find stash directory. Please check your config file.', 'output': []}
+				'message': 'Error: Could not find stash directory. Directory invalid or missing.', 'output': []}
 
 		stash_key = data['stash_key']
 		keys = list(stash_key.keys())
@@ -122,28 +132,30 @@ class Scrambler:
 
 		for i in range(len(keys)):
 			if keys[i] == '' or values[i] == '': return {'status': 400,
-				'message': 'Error: Invalid config file, keys and values cannot be blank. Please check your config file.',
+				'message': 'Error: Invalid config file, keys and values cannot be blank.',
 				'output': []}
 
 		for i in range(len(keys)):
-			if inverse == True:
-				response = self.stash(values[i],stash_dir,keys[i],origin_dir,overwrite=False,remove=False)
+			if retrieve == True:
+				response = self.stash(values[i],stash_dir,keys[i],origin_dir,
+										overwrite=False,remove=False,retrieve=retrieve)
 			else:
-				response = self.stash(keys[i],origin_dir,values[i],stash_dir,overwrite=True,remove=True)
+				response = self.stash(keys[i],origin_dir,values[i],stash_dir,
+										overwrite=True,remove=True,retrieve=retrieve)
 			statuscodes.append(response['status'])
 			result['output'].append(response['message'])
 
-		if inverse == True:
+		if retrieve == True:
 			keyword = 'Retrieve'
 			if len(statuscodes) > 1 and 200 not in statuscodes:
 				result['status'] = 400
-				result['message'] = 'Error: no stash files retrieved. Please check your config file.'
+				result['message'] = 'Error: No stashed files retrieved. Specified files did not exist.'
 				return result
 		else:
 			keyword = 'Stash'
 			if len(statuscodes) > 1 and 200 not in statuscodes:
 				result['status'] = 400
-				result['message'] = 'Error: no stash files found in {}'.format(origin_dir)
+				result['message'] = 'Error: No files to stash found in {}'.format(origin_dir)
 				return result
 			timetravel = self.timetravel(stash_dir)
 			if timetravel['status'] == 200:
@@ -155,13 +167,13 @@ class Scrambler:
 		result['message'] = '{} completed.'.format(keyword)
 		return result
 
-	def encrypt_msg(self, password, message, decrypt=False, pbkdf2=True):
-		data = {'medium': 'text', 'input': message, 'outpath': None}
-		result = ossl.encrypt(password, data, decrypt, pbkdf2)
+	def encrypt_msg(self, password, message, decrypt=False):
+		data = {'format': 'text', 'input': message, 'outpath': None}
+		result = ossl.encrypt(password, data, decrypt)
 		return result
 
 	def encrypt_file(self, password, filepath,
-					decrypt=False, pbkdf2=True, keep_org=False, naked=False):
+					decrypt=False, keep_org=False, naked=False):
 		result = {'status': None, 'message': None}
 		tag_options = {'encrypt' : ['-c'],
 			'decrypt' : ['-d', '-NAKED']}
@@ -189,8 +201,8 @@ class Scrambler:
 			result['message'] = 'Action already performed on: ' + filepath
 			return result
 
-		data = {'medium': 'file', 'input': filepath, 'outpath': outpath}
-		response = ossl.encrypt(password, data, decrypt, pbkdf2)
+		data = {'format': 'file', 'input': filepath, 'outpath': outpath}
+		response = ossl.encrypt(password, data, decrypt)
 		if response['status'] == 400:
 			try:
 				os.remove(outpath)
@@ -216,11 +228,11 @@ class Scrambler:
 		return result
 
 	def encrypt_all_files(self, password, wd, extension=None,
-					decrypt=False, pbkdf2=True, keep_org=False, naked=False):
+					decrypt=False, keep_org=False, naked=False):
 		filepaths = Crawler.get_files(wd, extension=extension)
 		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 
-		output = [self.encrypt_file(password,filepath,decrypt=decrypt,pbkdf2=pbkdf2,
+		output = [self.encrypt_file(password,filepath,decrypt=decrypt,
 					keep_org=keep_org,naked=naked)['message'] for filepath in filepaths]
 
 		timetravel = self.timetravel_folders(wd)

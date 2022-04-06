@@ -18,13 +18,12 @@ class EncryptionGUI:
 		print('[1] A Message, [2] A File, [3] All Files, [4] Columns in a Dataframe')
 
 	def option_enc_msg(self, decrypt=False):
-		pbkdf2 = self.instance.pbkdf2
 		if decrypt == True:
 			keyword = 'Decrypt'
 			pass_msg = 'Password: '
 		else:
 			keyword = 'Encrypt'
-			pass_msg = 'Password (>=16 chars required): '
+			pass_msg = 'Password (>10 chars required): '
 		cmd.clear()
 		print('What is the message you want to {}?'.format(keyword.upper()))
 		print(' ')
@@ -39,8 +38,8 @@ class EncryptionGUI:
 		if decrypt == True:
 			confirm = password
 		else:
-			if len(password) <= 15:
-				cmd.clear(); print('Password must be 16 characters or more, no action taken.')
+			if len(password) < 10:
+				cmd.clear(); print('Password must greater than 10 characters, no action taken.')
 				return
 			print(' ')
 			confirm = getpass('Please confirm password: ')
@@ -48,7 +47,7 @@ class EncryptionGUI:
 		cmd.clear()
 		if password != confirm: print('Password mismatch, no action taken.'); return
 
-		result = self.scrambler.encrypt_msg(password,message,decrypt,pbkdf2)
+		result = self.scrambler.encrypt_msg(password,message,decrypt)
 		if result['status'] != 200: print(result['message']); return
 
 		print('{}ion complete.'.format(keyword))
@@ -64,7 +63,6 @@ class EncryptionGUI:
 
 	def option_enc_file(self, decrypt, keep_org, naked=False, all=False):
 		wd = self.instance.wd
-		pbkdf2 = self.instance.pbkdf2
 
 		if decrypt == True:
 			keyword = 'decrypt'
@@ -75,7 +73,7 @@ class EncryptionGUI:
 			keyword = 'encrypt'
 			keywording = 'Encrypting'
 			keywordion = 'Encryption'
-			pass_msg = 'Password (>=16 chars required): '
+			pass_msg = 'Password (>10 chars required): '
 
 		if wd == None: cmd.clear(); print('Error: No working directory set. Please set working directory first.'); return
 
@@ -124,7 +122,7 @@ class EncryptionGUI:
 		if decrypt == True:
 			confirm = password
 		else:
-			if len(password) <= 15: cmd.clear(); print('Password must be 16 characters or more, no action taken.'); return
+			if len(password) < 10: cmd.clear(); print('Password must greater than 10 characters, no action taken.'); return
 			print(' ')
 			confirm = getpass('Please confirm password: ')
 
@@ -135,14 +133,14 @@ class EncryptionGUI:
 
 		if all == True:
 			result = self.scrambler.encrypt_all_files(password,wd,extension=extension,
-							decrypt=decrypt,pbkdf2=pbkdf2,keep_org=keep_org,naked=naked)
+							decrypt=decrypt,keep_org=keep_org,naked=naked)
 			if result['status'] != 200:
 				print(result['message'])
 			else:
 				for output in result['output']: print(output)
 		else:
 			result = self.scrambler.encrypt_file(password,filename,
-							decrypt=decrypt,pbkdf2=pbkdf2,keep_org=keep_org,naked=naked)
+							decrypt=decrypt,keep_org=keep_org,naked=naked)
 			print(result['message'])
 
 		print(' ')

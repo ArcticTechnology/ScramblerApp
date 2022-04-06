@@ -122,16 +122,6 @@ echo export PATH=~/.local/bin:$PATH > ~/.bash_profile
 source ~/.bash_profile
 ```
 
-### "ImportError: No module named 'tkinter'
-Your python version is probably missing tkinter which typically comes default. See this post for details [https://stackoverflow.com/a/25905642]. Install it with the following:
-```
-sudo apt-get install python3-tk
-```
-For Mac, use this:
-```
-brew install python-tk
-```
-
 ### Instructions for Git Bash
 For Windows, it is recommended to run this app on a linux emulation layer like the Git Bash terminal. Here are the instructions for installing and setting up Git Bash:
 1. Go to https://git-scm.com/downloads and click download.
