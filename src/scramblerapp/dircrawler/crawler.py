@@ -21,6 +21,8 @@
 
 import os
 from os.path import isfile, isdir, join, abspath
+from types import NoneType
+from typing import Union
 
 class Crawler:
 
@@ -75,7 +77,7 @@ class Crawler:
 		return dpaths
 
 	@classmethod
-	def get_files(self, wd: str, extension=None, fix=True) -> list:
+	def get_files(self, wd: str, extension: Union[str, NoneType] = None, fix: bool = True) -> list:
 
 		filepaths = []
 

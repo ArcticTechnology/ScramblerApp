@@ -1,8 +1,31 @@
+# The Scrambler
+# Copyright (c) 2022 Arctic Technology LLC
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import shlex; import subprocess
-from random import randrange
-from datetime import datetime, timedelta
 from os import remove
 from os.path import isfile, isdir, exists
+from types import NoneType
+from typing import Union
+from random import randrange
+from datetime import datetime, timedelta
 from .dircrawler.crawler import Crawler
 from .dircrawler.filemodder import FileModder
 from .utils.commoncmd import CommonCmd as cmd
@@ -30,7 +53,7 @@ class Scrambler:
 		else:
 			return {'status': 400, 'message': 'Error timetravelling: ' + str(path)}
 
-	def timetravel_files(self, dir, extension=None):
+	def timetravel_files(self, dir: str, extension: Union[str, NoneType] = None) -> dict:
 		files = Crawler.get_files(dir, extension=extension)
 
 		if len(files) <= 0: return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
@@ -38,7 +61,7 @@ class Scrambler:
 		output = [self.timetravel(f)['message'] for f in files]
 		return {'status': 200, 'message': 'Timetravel files complete.', 'output': output}
 
-	def timetravel_folders(self, dir):
+	def timetravel_folders(self, dir: str) -> dict:
 		folders = Crawler.get_folders(dir)
 
 		if exists(dir) != True: return {'status': 400, 'message': 'Error timetravelling: no directory found.', 'output': []}
@@ -52,7 +75,7 @@ class Scrambler:
 
 		return {'status': 200, 'message': 'Timetravel folders complete.', 'output': output}
 
-	def invalid_stash_data(self, data):
+	def invalid_stash_data(self, data: dict) -> bool:
 		no_origin_dir = 'origin_dir' not in data
 		no_stash_dir = 'stash_dir' not in data
 		no_stash_key = 'stash_key' not in data
@@ -69,7 +92,8 @@ class Scrambler:
 		if len(keys) != len(values): return True
 		return False
 
-	def stash(self, curr_filename, curr_dir, new_filename, new_dir, overwrite=False, remove=False, retrieve=False):
+	def stash(self, curr_filename: str, curr_dir: str, new_filename: str, new_dir: str,
+				overwrite: bool = False, remove: bool = False, retrieve: bool = False) -> dict:
 		curr_filepath = Crawler.joinpath(curr_dir, curr_filename)
 		result = {'status': None, 'message': None}
 
@@ -111,7 +135,7 @@ class Scrambler:
 					result['message'] = 'Error: Failed to remove {}'.format(curr_filepath)
 		return response
 
-	def stash_all(self, data, retrieve=False):
+	def stash_all(self, data: dict, retrieve: bool = False) -> dict:
 		"""
 		Data format:
 		{"origin_dir": "/home/origin_directory/",
@@ -173,13 +197,13 @@ class Scrambler:
 		result['message'] = '{} completed.'.format(keyword)
 		return result
 
-	def encrypt_msg(self, password, message, decrypt=False):
+	def encrypt_msg(self, password: str, message: str, decrypt: bool = False) -> dict:
 		data = {'format': 'text', 'input': message, 'outpath': None}
 		result = ossl.encrypt(password, data, decrypt)
 		return result
 
-	def encrypt_file(self, password, filepath,
-					decrypt=False, keep_org=False, naked=False):
+	def encrypt_file(self, password: str, filepath: str, decrypt: bool = False,
+					keep_org: bool = False, naked: bool = False) -> dict:
 		result = {'status': None, 'message': None}
 		tag_options = {'encrypt' : ['c'],
 			'decrypt' : ['d', 'NAKED']}
@@ -237,8 +261,8 @@ class Scrambler:
 
 		return result
 
-	def encrypt_all_files(self, password, wd, extension=None,
-					decrypt=False, keep_org=False, naked=False):
+	def encrypt_all_files(self, password: str, wd: str, extension: Union[str, NoneType] = None,
+					decrypt: bool = False, keep_org: bool = False, naked: bool = False) -> dict:
 		filepaths = Crawler.get_files(wd, extension=extension)
 		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 

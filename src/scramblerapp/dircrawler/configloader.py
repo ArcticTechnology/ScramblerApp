@@ -24,6 +24,8 @@ from os import stat
 from os.path import (
 	basename, dirname, exists, normpath
 )
+from types import NoneType
+from typing import Union
 from .crawler import Crawler
 from .filemodder import FileModder
 from ..utils.encryption import OpenSSLEncyptor as ossl
@@ -122,7 +124,7 @@ class ConfigLoader:
 		else:
 			return False
 
-	def enc_parse(self, password=None) -> dict:
+	def enc_parse(self, password: Union[str, NoneType] = None) -> dict:
 		has_enctag = self.hasEncyptedTag()
 
 		if has_enctag == False:

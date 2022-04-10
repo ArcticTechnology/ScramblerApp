@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from types import NoneType
 from typing import Union
 import os; import random; import string
 from .crawler import Crawler
@@ -59,7 +60,8 @@ class FileModder:
 			return last_line
 
 	@classmethod
-	def format_ext(self, raw_extension: str, ifblank: str = '.txt', ifstar=None) -> Union[str, None]:
+	def format_ext(self, raw_extension: str, ifblank: str = '.txt',
+					ifstar: Union[str, NoneType] = None) -> Union[str, NoneType]:
 		if raw_extension == '*':
 			return ifstar
 		if raw_extension == '':
@@ -88,7 +90,7 @@ class FileModder:
 		return Crawler.get_files(wd, extension)
 
 	@classmethod
-	def add_tag(self, filepath: str, tag: str, oldtags: list = [], 
+	def add_tag(self, filepath: str, tag: str, oldtags: list = [],
 				newtags: list = [], spliton: str = '-') -> str:
 		extension = Crawler.get_extension(filepath)
 		prefix = Crawler.get_prefix(filepath)
