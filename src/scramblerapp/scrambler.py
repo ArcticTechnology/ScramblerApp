@@ -1,5 +1,7 @@
-import os; import random;
 import shlex; import subprocess
+from random import randrange
+from datetime import datetime, timedelta
+from os import remove
 from os.path import isfile, isdir, exists
 from .dircrawler.crawler import Crawler
 from .dircrawler.filemodder import FileModder
@@ -8,21 +10,25 @@ from .utils.encryption import OpenSSLEncyptor as ossl
 
 class Scrambler:
 
-	def timetravel(self,path,hours_ago=None):
-		if hours_ago == None: hours_ago = random.randrange(1,121000)
+	def random_time(self) -> str:
+		end = datetime.now()
+		start = datetime.strptime('1/1/2005 12:00 AM', '%m/%d/%Y %I:%M %p')
+		delta = end - start
+		int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
+		random_second = randrange(int_delta)
+		return str(start + timedelta(seconds=random_second))
 
-		pathlex = shlex.quote(path)
-		hourslex = shlex.quote(str(hours_ago))
-		command = shlex.split('touch -d "{h} hours ago" {p}'.format(h=hourslex,p=pathlex))
+	def timetravel(self, path: str) -> dict:
+		command = shlex.split('touch -d "{t}" "{p}"'.format(t=self.random_time(),p=path))
 		process = subprocess.run(command,
 					stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
 		returncode = process.returncode
 
 		if returncode == 0:
-			return {'status': 200, 'message': 'Timetravelled: ' + path}
+			return {'status': 200, 'message': 'Timetravelled: ' + str(path)}
 		else:
-			return {'status': 400, 'message': 'Error timetravelling: ' + path}
+			return {'status': 400, 'message': 'Error timetravelling: ' + str(path)}
 
 	def timetravel_files(self, dir, extension=None):
 		files = Crawler.get_files(dir, extension=extension)
@@ -97,7 +103,7 @@ class Scrambler:
 		self.timetravel(new_filepath)
 		if remove == True: 
 			try:
-				os.remove(curr_filepath)
+				remove(curr_filepath)
 			except:
 				if retrieve == True:
 					result['message'] = 'Error: Failed to remove file from stashed directory'
@@ -175,16 +181,20 @@ class Scrambler:
 	def encrypt_file(self, password, filepath,
 					decrypt=False, keep_org=False, naked=False):
 		result = {'status': None, 'message': None}
-		tag_options = {'encrypt' : ['-c'],
-			'decrypt' : ['-d', '-NAKED']}
+		tag_options = {'encrypt' : ['c'],
+			'decrypt' : ['d', 'NAKED']}
 
 		if decrypt == True:
 			index = 1 if naked == True else 0
-			outpath = FileModder.add_tag(filepath,tag_options['decrypt'][index],
-								tag_options['encrypt'],tag_options['decrypt'])
+			tag = tag_options['decrypt'][index]
+			oldtags = tag_options['encrypt']
+			newtags = tag_options['decrypt']
 		else:
-			outpath = FileModder.add_tag(filepath,tag_options['encrypt'][0],
-								tag_options['decrypt'],tag_options['encrypt'])
+			tag = tag_options['encrypt'][0]
+			oldtags = tag_options['decrypt']
+			newtags = tag_options['encrypt']
+
+		outpath = FileModder.add_tag(filepath,tag,oldtags,newtags)
 
 		if exists(filepath) == False:
 			result['status'] = 400
@@ -205,7 +215,7 @@ class Scrambler:
 		response = ossl.encrypt(password, data, decrypt)
 		if response['status'] == 400:
 			try:
-				os.remove(outpath)
+				remove(outpath)
 			except:
 				pass
 			return response
@@ -218,7 +228,7 @@ class Scrambler:
 			return result
 
 		try:
-			os.remove(filepath)
+			remove(filepath)
 			result['status'] = 200
 			result['message'] = response['message'] + ' (original deleted).'
 		except:

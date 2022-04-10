@@ -1,12 +1,14 @@
-import os
 import shlex; import subprocess
+from os import getcwd, listdir, system
 from os.path import isfile, isdir
 from ..dircrawler.crawler import Crawler
 
 class CommonCmd:
 
 	@classmethod
-	def pwd(self):
+	def pwd(self, internal=False):
+		if internal: return Crawler.stdpath(getcwd())
+
 		command = 'pwd'
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -18,19 +20,19 @@ class CommonCmd:
 			return 'Error: unable to print working directory.'
 
 	@classmethod
-	def ls(self):
-		files = [f for f in os.listdir('.') if isfile(f)]
-		folders = [d for d in os.listdir('.') if isdir(d)]
+	def ls(self) -> list:
+		files = [f for f in listdir('.') if isfile(f)]
+		folders = [d for d in listdir('.') if isdir(d)]
 		files.sort()
 		folders.sort()
 		return folders + files
 
 	@classmethod
 	def clear(self):
-		os.system('clear')
+		system('clear')
 
 	@classmethod
-	def copyfile(self,curr_filepath,new_filepath):
+	def copyfile(self, curr_filepath: str, new_filepath: str) -> dict:
 
 		cfilelex = shlex.quote(curr_filepath)
 		nfilelex = shlex.quote(new_filepath)

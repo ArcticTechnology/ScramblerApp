@@ -5,8 +5,6 @@ from .gui.stashgui import StashGUI
 from .gui.instance import Instance
 from .dircrawler.configloader import ConfigLoader
 
-from .utils.encryption import OpenSSLEncyptor as ossl
-
 def main():
 	scrambler = Scrambler()
 	instance = Instance()

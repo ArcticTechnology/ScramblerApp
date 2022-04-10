@@ -1,9 +1,31 @@
-import os; import json
+# Dir Crawler: Config Loader with Encryption
+# Copyright (c) 2022 Arctic Technology LLC
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import json
+from os import stat
 from os.path import (
 	basename, dirname, exists, normpath
 )
 from .crawler import Crawler
-from .read import read_file
+from .filemodder import FileModder
 from ..utils.encryption import OpenSSLEncyptor as ossl
 
 class ConfigLoader:
@@ -60,7 +82,7 @@ class ConfigLoader:
 
 	def hasContent(self) -> bool:
 		if exists(self.configfile) == False: return False
-		if os.stat(self.configfile).st_size > 0:
+		if stat(self.configfile).st_size > 0:
 			return True
 		else:
 			return False
@@ -79,7 +101,7 @@ class ConfigLoader:
 
 	def parse(self) -> dict:
 		try:
-			content = ''.join(read_file(self.configfile))
+			content = ''.join(FileModder.read_file(self.configfile))
 		except:
 			return {'status': 400,
 						'message': 'Error: config file could not be read.', 'data': None}
@@ -90,7 +112,7 @@ class ConfigLoader:
 					'data': result}
 		except:
 			return {'status': 400,
-				'message': 'Error: config file not structured correctly.',
+				'message': 'Error: Failed to read config, invalid Json format.',
 				'data': None}
 
 	def hasEncyptedTag(self) -> bool:
@@ -102,6 +124,9 @@ class ConfigLoader:
 
 	def enc_parse(self, password=None) -> dict:
 		has_enctag = self.hasEncyptedTag()
+
+		if has_enctag == False:
+			return self.parse()
 
 		if has_enctag == True and password == None:
 			return {'status': 400,
@@ -121,14 +146,3 @@ class ConfigLoader:
 				return {'status': 400,
 					'message': 'Error: Failed to read config, file formatted incorrectly.',
 					'output': None}
-
-		if has_enctag == False:
-			try:
-				content = ''.join(read_file(self.configfile))
-				result = json.loads(content)
-				return {'status': 200, 'message': 'Read config file complete.',
-						'output': result}
-			except:
-				return {'status': 400,
-						'message': 'Error: Failed to read config, file formatted incorrectly.',
-						'output': None}

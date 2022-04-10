@@ -1,5 +1,5 @@
-from os.path import exists
 import shlex; import subprocess
+from os.path import exists
 
 class OpenSSLEncyptor:
 
