@@ -22,8 +22,7 @@
 import shlex; import subprocess
 from os import remove
 from os.path import isfile, isdir, exists
-from types import NoneType
-from typing import Union
+from typing import Type, Union
 from random import randrange
 from datetime import datetime, timedelta
 from .dircrawler.crawler import Crawler
@@ -53,7 +52,7 @@ class Scrambler:
 		else:
 			return {'status': 400, 'message': 'Error timetravelling: ' + str(path)}
 
-	def timetravel_files(self, dir: str, extension: Union[str, NoneType] = None) -> dict:
+	def timetravel_files(self, dir: str, extension: Union[str, Type[None]] = None) -> dict:
 		files = Crawler.get_files(dir, extension=extension)
 
 		if len(files) <= 0: return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
@@ -261,7 +260,7 @@ class Scrambler:
 
 		return result
 
-	def encrypt_all_files(self, password: str, wd: str, extension: Union[str, NoneType] = None,
+	def encrypt_all_files(self, password: str, wd: str, extension: Union[str, Type[None]] = None,
 					decrypt: bool = False, keep_org: bool = False, naked: bool = False) -> dict:
 		filepaths = Crawler.get_files(wd, extension=extension)
 		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}

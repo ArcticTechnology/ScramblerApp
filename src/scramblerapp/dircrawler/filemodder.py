@@ -19,8 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from types import NoneType
-from typing import Union
+from typing import Type, Union
 import os; import random; import string
 from .crawler import Crawler
 
@@ -61,7 +60,7 @@ class FileModder:
 
 	@classmethod
 	def format_ext(self, raw_extension: str, ifblank: str = '.txt',
-					ifstar: Union[str, NoneType] = None) -> Union[str, NoneType]:
+				ifstar: Union[str, Type[None]] = None) -> Union[str, Type[None]]:
 		if raw_extension == '*':
 			return ifstar
 		if raw_extension == '':
