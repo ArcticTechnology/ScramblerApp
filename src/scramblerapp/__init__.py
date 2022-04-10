@@ -2,7 +2,7 @@
 __all__ = [
 	'Scrambler', 'ScramblerGUI',
 	'EncryptionGUI', 'StashGUI',
-	'Instance', 'ConfigParser'
+	'Instance', 'ConfigLoader'
 ]
 
 from .scrambler import *
