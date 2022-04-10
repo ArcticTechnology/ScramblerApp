@@ -4,9 +4,9 @@ from scramblerapp import *
 def main():
 	scrambler = Scrambler()
 	instance = Instance()
-	configparser = ConfigParser()
+	configloader = ConfigLoader()
 	encryptiongui = EncryptionGUI(scrambler, instance)
-	stashgui = StashGUI(scrambler, instance, configparser)
+	stashgui = StashGUI(scrambler, instance, configloader)
 	scramblergui = ScramblerGUI(scrambler, instance, encryptiongui, stashgui)
 	scramblergui.run()
 
