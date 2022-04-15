@@ -29,7 +29,7 @@ class EncryptionGUI:
 		self.scrambler = scrambler
 		self.instance = instance
 
-	def optionscreen(self, decrypt=False):
+	def optionscreen(self, decrypt: bool = False):
 		if decrypt == True:
 			keyword = 'DECRYPT'
 		else:
@@ -38,7 +38,7 @@ class EncryptionGUI:
 		print('What would you like to {}?'.format(keyword))
 		print('[1] A Message, [2] A File, [3] All Files, [4] Columns in a Dataframe')
 
-	def option_enc_msg(self, decrypt=False):
+	def option_enc_msg(self, decrypt: bool = False):
 		if decrypt == True:
 			keyword = 'Decrypt'
 			pass_msg = 'Password: '
@@ -82,7 +82,8 @@ class EncryptionGUI:
 		print('Press any key to exit.')
 		input(); cmd.clear(); return
 
-	def option_enc_file(self, decrypt, keep_org, naked=False, all=False):
+	def option_enc_file(self, decrypt: bool, keep_org: bool,
+						naked: bool = False, all: bool = False):
 		wd = self.instance.wd
 
 		if decrypt == True:
@@ -168,7 +169,7 @@ class EncryptionGUI:
 		print('{} complete.'.format(keywordion))
 		input(); cmd.clear(); return
 
-	def run(self, decrypt):
+	def run(self, decrypt: bool):
 		cmd.clear()
 		print(' ')
 		self.optionscreen(decrypt)

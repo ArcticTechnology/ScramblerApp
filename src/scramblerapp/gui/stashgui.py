@@ -58,16 +58,16 @@ class StashGUI:
 		if self.configloader.hasEncyptedTag() == True:
 			cmd.clear()
 			print('No action taken, .config-c appears to be encrypted already:')
-			print(filepath)
+			print(str(filepath))
 			return
 		print(' ')
 		print('Are you sure you want to encrypt the following [y/n]:')
-		print(filepath)
+		print(str(filepath))
 		confirm = input(); cmd.clear()
 		if confirm != 'y': print('Exited, no action taken.'); return
 		if isfile(filepath) != True: print('Invalid file, no action taken.'); return
 
-		print('Encrypting: ' + filepath)
+		print('Encrypting: ' + str(filepath))
 		print(' ')
 		password = getpass('Password (>10 chars required): ')
 		if password == '': cmd.clear(); print('Password cannot be blank, no action taken.'); return

@@ -20,7 +20,7 @@
 # SOFTWARE.
 
 import shlex; import subprocess
-from os import getcwd, listdir, system
+from os import getcwd, listdir
 from os.path import isfile, isdir
 from ..dircrawler.crawler import Crawler
 
@@ -28,13 +28,13 @@ class CommonCmd:
 
 	@classmethod
 	def pwd(self, internal: bool = False) -> str:
-		if internal: return Crawler.stdpath(getcwd())
+		if internal: return Crawler.posixize(getcwd())
 
 		command = 'pwd'
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		returncode = process.returncode
-		result = Crawler.stdpath(process.stdout.decode().rstrip('\n'))
+		result = Crawler.posixize(process.stdout.decode().rstrip('\n'))
 		if returncode == 0:
 			return result
 		else:
@@ -50,19 +50,20 @@ class CommonCmd:
 
 	@classmethod
 	def clear(self):
-		system('clear')
+		subprocess.call('clear')
 
 	@classmethod
 	def copyfile(self, curr_filepath: str, new_filepath: str) -> dict:
 
-		cfilelex = shlex.quote(curr_filepath)
-		nfilelex = shlex.quote(new_filepath)
+		cfilelex = shlex.quote(curr_filepath) #Test test
+		nfilelex = shlex.quote(new_filepath) #test test 
+		# Probably needs to add escape here
 
 		command = shlex.split('cp {c} {n}'.format(c=cfilelex,n=nfilelex))
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		returncode = process.returncode
 		if returncode == 0:
-			return {'status': 200, 'message': 'File created: ' + new_filepath}
+			return {'status': 200, 'message': 'File created: ' + str(new_filepath)}
 		else:
-			return {'status': 400, 'message': 'Error creating file for: ' + curr_filepath}
+			return {'status': 400, 'message': 'Error creating file for: ' + str(curr_filepath)}

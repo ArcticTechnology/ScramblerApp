@@ -41,7 +41,8 @@ class Scrambler:
 		return str(start + timedelta(seconds=random_second))
 
 	def timetravel(self, path: str) -> dict:
-		command = shlex.split('touch -d "{t}" "{p}"'.format(t=self.random_time(),p=path))
+		ppath = Crawler.escape(Crawler.posixize(path))
+		command = shlex.split('touch -d "{t}" {p}'.format(t=self.random_time(),p=ppath))
 		process = subprocess.run(command,
 					stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
@@ -52,25 +53,28 @@ class Scrambler:
 		else:
 			return {'status': 400, 'message': 'Error timetravelling: ' + str(path)}
 
-	def timetravel_files(self, dir: str, extension: Union[str, Type[None]] = None) -> dict:
-		files = Crawler.get_files(dir, extension=extension)
+	def timetravel_files(self, path: str,
+						extension: Union[str, Type[None]] = None) -> dict:
+		files = Crawler.get_files(path, extension=extension)
 
-		if len(files) <= 0: return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
+		if len(files) <= 0:
+			return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
 
 		output = [self.timetravel(f)['message'] for f in files]
 		return {'status': 200, 'message': 'Timetravel files complete.', 'output': output}
 
-	def timetravel_folders(self, dir: str) -> dict:
-		folders = Crawler.get_folders(dir)
+	def timetravel_folders(self, path: str) -> dict:
+		folders = Crawler.get_folders(path)
 
-		if exists(dir) != True: return {'status': 400, 'message': 'Error timetravelling: no directory found.', 'output': []}
+		if exists(path) != True:
+			return {'status': 400, 'message': 'Error timetravelling: no directory found.', 'output': []}
 
 		if len(folders) <= 0:
 			output = ['No folders found to timetravel, no action taken.']
 		else:
 			output = [self.timetravel(folder)['message'] for folder in folders]
 
-		output.append(self.timetravel(dir)['message'])
+		output.append(self.timetravel(path)['message'])
 
 		return {'status': 200, 'message': 'Timetravel folders complete.', 'output': output}
 
@@ -91,8 +95,9 @@ class Scrambler:
 		if len(keys) != len(values): return True
 		return False
 
-	def stash(self, curr_filename: str, curr_dir: str, new_filename: str, new_dir: str,
-				overwrite: bool = False, remove: bool = False, retrieve: bool = False) -> dict:
+	def stash(self, curr_filename: str, curr_dir: str, new_filename: str,
+			new_dir: str,overwrite: bool = False, remove: bool = False,
+			retrieve: bool = False) -> dict:
 		curr_filepath = Crawler.joinpath(curr_dir, curr_filename)
 		result = {'status': None, 'message': None}
 
@@ -101,7 +106,7 @@ class Scrambler:
 			if retrieve == True:
 				result['message'] = 'Error: Retrieval failed, specified file not found in stashed directory.'
 			else:
-				result['message'] = 'Error: File not found {}'.format(curr_filepath)
+				result['message'] = 'Error: File not found {}'.format(str(curr_filepath))
 			return result
 
 		if isfile(curr_filepath) != True: 
@@ -109,19 +114,19 @@ class Scrambler:
 			if retrieve == True:
 				result['message'] = 'Error: Retrieval failed, specified file in stashed directory is corrupt.'
 			else:
-				result['message'] = 'Error: File is corrupt {}'.format(curr_filepath)
+				result['message'] = 'Error: File is corrupt {}'.format(str(curr_filepath))
 			return result
 
 		new_filepath = Crawler.joinpath(new_dir, new_filename)
 		if exists(new_filepath) == True and overwrite == False:
 			result['status'] = 400
 			if retrieve == True:
-				result['message'] = 'Error: File already exists {}'.format(new_filepath)
+				result['message'] = 'Error: File already exists {}'.format(str(new_filepath))
 			else:
 				result['message'] = 'Error: Stash failed, file already exists in stashed directory.'
 			return result
 
-		response = cmd.copyfile(curr_filepath,new_filepath)
+		response = cmd.copyfile(curr_filepath, new_filepath)
 		if response['status'] != 200: return response
 		self.timetravel(new_filepath)
 		if remove == True: 
@@ -131,7 +136,7 @@ class Scrambler:
 				if retrieve == True:
 					result['message'] = 'Error: Failed to remove file from stashed directory'
 				else:
-					result['message'] = 'Error: Failed to remove {}'.format(curr_filepath)
+					result['message'] = 'Error: Failed to remove {}'.format(str(curr_filepath))
 		return response
 
 	def stash_all(self, data: dict, retrieve: bool = False) -> dict:
@@ -145,11 +150,11 @@ class Scrambler:
 		"filename3": "stashed_filename3"}}
 		"""
 		result = {'status': None, 'message': None, 'output': []}
-		origin_dir = data['origin_dir']
-		stash_dir = data['stash_dir']
+		origin_dir = Crawler.posixize(data['origin_dir'])
+		stash_dir = Crawler.posixize(data['stash_dir'])
 
 		if isdir(origin_dir) == False: return {'status': 400,
-				'message': 'Error: Could not find origin directory {}'.format(origin_dir), 'output': []}
+				'message': 'Error: Could not find origin directory {}'.format(str(origin_dir)), 'output': []}
 
 		if isdir(stash_dir) == False: return {'status': 400,
 				'message': 'Error: Could not find stash directory. Directory invalid or missing.', 'output': []}
@@ -184,7 +189,7 @@ class Scrambler:
 			keyword = 'Stash'
 			if len(statuscodes) > 1 and 200 not in statuscodes:
 				result['status'] = 400
-				result['message'] = 'Error: No files to stash found in {}'.format(origin_dir)
+				result['message'] = 'Error: No files to stash found in {}'.format(str(origin_dir))
 				return result
 			timetravel = self.timetravel(stash_dir)
 			if timetravel['status'] == 200:
@@ -193,7 +198,7 @@ class Scrambler:
 				result['output'].append('Error timetravelling stash directory.')
 
 		result['status'] = 200
-		result['message'] = '{} completed.'.format(keyword)
+		result['message'] = '{} completed.'.format(str(keyword))
 		return result
 
 	def encrypt_msg(self, password: str, message: str, decrypt: bool = False) -> dict:
@@ -217,24 +222,25 @@ class Scrambler:
 			oldtags = tag_options['decrypt']
 			newtags = tag_options['encrypt']
 
-		outpath = FileModder.add_tag(filepath,tag,oldtags,newtags)
+		clean_filepath = Crawler.posixize(filepath)
+		outpath = FileModder.add_tag(clean_filepath,tag,oldtags,newtags)
 
-		if exists(filepath) == False:
+		if exists(clean_filepath) == False:
 			result['status'] = 400
-			result['message'] = 'Error failed to find file: ' + filepath
+			result['message'] = 'Error failed to find file: ' + str(clean_filepath)
 			return result
 
 		if exists(outpath) == True:
 			result['status'] = 400
-			result['message'] = 'Error output path already exists: ' + outpath
+			result['message'] = 'Error output path already exists: ' + str(outpath)
 			return result
 
-		if outpath == filepath:
+		if outpath == clean_filepath:
 			result['status'] = 400
-			result['message'] = 'Action already performed on: ' + filepath
+			result['message'] = 'Action already performed on: ' + str(clean_filepath)
 			return result
 
-		data = {'format': 'file', 'input': filepath, 'outpath': outpath}
+		data = {'format': 'file', 'input': clean_filepath, 'outpath': outpath}
 		response = ossl.encrypt(password, data, decrypt)
 		if response['status'] == 400:
 			try:
@@ -251,7 +257,7 @@ class Scrambler:
 			return result
 
 		try:
-			remove(filepath)
+			remove(clean_filepath)
 			result['status'] = 200
 			result['message'] = response['message'] + ' (original deleted).'
 		except:
@@ -260,8 +266,9 @@ class Scrambler:
 
 		return result
 
-	def encrypt_all_files(self, password: str, wd: str, extension: Union[str, Type[None]] = None,
-					decrypt: bool = False, keep_org: bool = False, naked: bool = False) -> dict:
+	def encrypt_all_files(self, password: str, wd: str,
+					extension: Union[str, Type[None]] = None, decrypt: bool = False,
+					keep_org: bool = False, naked: bool = False) -> dict:
 		filepaths = Crawler.get_files(wd, extension=extension)
 		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}
 

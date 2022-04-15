@@ -19,77 +19,79 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import re
 import os
-from os.path import isfile, isdir, join, abspath
+from os.path import (
+	basename, dirname, isfile, isdir, join
+)
 from typing import Type, Union
 
 class Crawler:
 
 	@classmethod
-	def stdpath(self, path: str) -> str:
+	def posixize(self, path: str) -> str:
+		"""
+		If nt then replace any backslash with forwardslash that is
+		preceding a non-whitespace character, and replace C:/c/ with C:/.
+		"""
 		platform = os.name
 		if platform == 'nt':
-			result = abspath(path).replace('\\','/')
-			if result[0:5] == 'C:/c/': return result.replace('C:/c/','C:/')
-			return result
+			formatted = re.sub(r'\\(?=\S)', r'/', path)
+			if formatted[0:5] == 'C:/c/':
+				formatted = formatted.replace('C:/c/','C:/')
+			return formatted
 		else:
-			return abspath(path)
+			return path
+
+	@classmethod
+	def escape(self, path: str) -> str:
+		"""
+		Adds backslash in front of any space character that
+		is not preceded by a backslash.
+		"""
+		return re.sub(r'(?<!\\) ', r'\\ ', path)
 
 	@classmethod
 	def joinpath(self, path: str, filename: str) -> str:
-		platform = os.name
-		if platform == 'nt':
-			result = abspath(join(path,filename)).replace('\\','/')
-			if result[0:5] == 'C:/c/': return result.replace('C:/c/','C:/')
-			return result
-		else:
-			return abspath(join(path, filename))
+		joined = join(path, filename)
+		return self.posixize(joined)
 
 	@classmethod
-	def get_filenm(self, path: str) -> str:
-		result = self.stdpath(path)
-		return result.split('/')[-1]
+	def get_basename(self, path: str) -> str:
+		"""Gets the file name if file or folder name if folder"""
+		return basename(self.posixize(path))
+
+	@classmethod
+	def get_rootdir(self, path: str) -> str:
+		return dirname(self.posixize(path))
 
 	@classmethod
 	def get_prefix(self, filepath: str) -> str:
-		return os.path.splitext(filepath)[0]
+		return self.get_basename(os.path.splitext(filepath)[-2])
 
 	@classmethod
 	def get_extension(self, filepath: str) -> str:
 		return os.path.splitext(filepath)[-1]
 
 	@classmethod
-	def get_folders(self, wd: str, fix=True) -> list:
-
-		dpaths = []
-
+	def get_folders(self, wd: str) -> list:
+		paths = []
 		for root, dirname, _ in os.walk(wd):
 			for d in dirname:
-				dpath = self.joinpath(root,d)
-				if isdir(dpath):
-					if ' ' in d and fix == True:
-						npath = os.rename(dpath,self.joinpath(root,d.replace(' ','_')))
-						dpaths.append(npath)
-					else:
-						dpaths.append(dpath)
-
-		return dpaths
+				path = self.joinpath(root,d)
+				if isdir(path):
+					paths.append(path)
+		return paths
 
 	@classmethod
-	def get_files(self, wd: str, extension: Union[str, Type[None]] = None, 
-				fix: bool = True) -> list:
-
+	def get_files(self, wd: str,
+				extension: Union[str, Type[None]] = None) -> list:
 		filepaths = []
-
 		for root, _ , files in os.walk(wd):
 			for f in files:
 				filepath = self.joinpath(root,f)
 				if isfile(filepath):
-					if ' ' in f and fix == True:
-						npath = os.rename(filepath,self.joinpath(root,f.replace(' ','_')))
-						filepaths.append(npath)
-					else:
-						filepaths.append(filepath)
+					filepaths.append(filepath)
 
 		if extension == None or len(filepaths) == 0:
 			return filepaths

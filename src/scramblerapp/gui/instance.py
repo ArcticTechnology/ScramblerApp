@@ -42,7 +42,7 @@ class Instance:
 	def set_wd(self, raw_wd: str) -> dict:
 		if raw_wd == '': return {'status': 400,
 					'message': 'Invalid input, no action taken.'}
-		wd = Crawler.stdpath(raw_wd)
+		wd = Crawler.posixize(raw_wd)
 		if os.path.isdir(wd) == False:
 			return {'status': 400, 'message': 'Invalid input, no action taken.'}
 		self.wd = wd
@@ -51,7 +51,7 @@ class Instance:
 
 	def set_cwd_as_wd(self) -> dict:
 		curr_dir = os.getcwd()
-		wd = Crawler.stdpath(curr_dir)
+		wd = Crawler.posixize(curr_dir)
 		if os.path.isdir(wd) == False:
 			return {'status': 400, 'message': 'Invalid input, no action taken.'}
 		self.wd = wd

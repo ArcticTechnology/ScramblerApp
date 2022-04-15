@@ -21,6 +21,8 @@
 
 import shlex; import subprocess
 from os.path import exists
+from typing import Type, Union
+from ..dircrawler.crawler import Crawler
 
 class OpenSSLEncyptor:
 
@@ -79,13 +81,14 @@ class OpenSSLEncyptor:
 			return self._encrypt_msg(inputtext,_d,_pbkdf2,passwd,decrypt)
 
 	@classmethod
-	def _encrypt_file(self, inpath: str, outpath: str, _d: str, _pbkdf2: str, passwd: str, decrypt: bool) -> dict:
+	def _encrypt_file(self, inpath: str, outpath: Union[str, Type[None]],
+						_d: str, _pbkdf2: str, passwd: str, decrypt: bool) -> dict:
 		result = {'status': None, 'message': None, 'output': None}
 		if exists(inpath) == False:
 			return {'status': 400, 'message': 'Error: Invalid input path.'}
 
-		_inpath = ' -in {}'.format(inpath)
-		_outpath = '' if outpath == None else ' -out {}'.format(outpath)
+		_inpath = ' -in {}'.format(Crawler.escape(inpath))
+		_outpath = '' if outpath == None else ' -out {}'.format(Crawler.escape(outpath))
 		c = 'openssl aes-256-cbc{d} -a -salt{p}{i}{o} -pass pass:{pa}'.format(
 						d=_d,p=_pbkdf2,i=_inpath,o=_outpath,pa=passwd)
 		command = shlex.split(c)
@@ -105,7 +108,7 @@ class OpenSSLEncyptor:
 			return result
 		elif returncode == 0 and outpath != None:
 			result['status'] = 200
-			result['message'] = '{}ed: '.format('Decrypt' if decrypt else 'Encrypt') + outpath
+			result['message'] = '{}ed: '.format('Decrypt' if decrypt else 'Encrypt') + str(outpath)
 			return result
 		else:
 			result['status'] = 400

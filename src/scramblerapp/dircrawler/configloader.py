@@ -21,9 +21,7 @@
 
 import json
 from os import stat
-from os.path import (
-	basename, dirname, exists, normpath
-)
+from os.path import dirname, exists
 from typing import Type, Union
 from .crawler import Crawler
 from .filemodder import FileModder
@@ -43,14 +41,14 @@ class ConfigLoader:
 		self.load()
 
 	def _get_rootpath(self) -> str:
-		return dirname(dirname(__file__))
+		return Crawler.posixize(dirname(dirname(__file__)))
 
 	def _get_env(self) -> str:
 		if self.rootpath == '': return ''
-		filename = basename(normpath(dirname(self.rootpath)))
-		if filename == 'site-packages':
+		folder = Crawler.get_basename(dirname(self.rootpath))
+		if folder == 'site-packages':
 			return 'build'
-		elif filename == 'src':
+		elif folder == 'src':
 			return 'dev'
 		else:
 			return ''
@@ -117,7 +115,7 @@ class ConfigLoader:
 				'data': None}
 
 	def hasEncyptedTag(self) -> bool:
-		filename = basename(normpath(self.configfile))
+		filename = Crawler.get_basename(self.configfile)
 		if '.config-c' in filename:
 			return True
 		else:
