@@ -14,9 +14,5 @@ def main():
 	scramblergui = ScramblerGUI(scrambler, instance, encryptiongui, stashgui)
 	scramblergui.run()
 
-## Need to test timetravel
-## Need to test commoncmd.copyfile
-## Need to test encryption _encrypt_file
-
 if __name__ == '__main__':
 	raise SystemExit(main())

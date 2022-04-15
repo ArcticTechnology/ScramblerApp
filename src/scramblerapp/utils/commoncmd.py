@@ -55,14 +55,15 @@ class CommonCmd:
 	@classmethod
 	def copyfile(self, curr_filepath: str, new_filepath: str) -> dict:
 
-		cfilelex = shlex.quote(curr_filepath) #Test test
-		nfilelex = shlex.quote(new_filepath) #test test 
-		# Probably needs to add escape here
+		cfile = Crawler.escape(Crawler.posixize(curr_filepath))
+		nfile = Crawler.escape(Crawler.posixize(new_filepath))
 
-		command = shlex.split('cp {c} {n}'.format(c=cfilelex,n=nfilelex))
+		command = shlex.split('cp {c} {n}'.format(c=cfile,n=nfile))
+		print(command)
 		process = subprocess.run(command,
 			stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		returncode = process.returncode
+		print(process.stderr.decode())
 		if returncode == 0:
 			return {'status': 200, 'message': 'File created: ' + str(new_filepath)}
 		else:
