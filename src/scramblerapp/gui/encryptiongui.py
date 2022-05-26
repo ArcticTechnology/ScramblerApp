@@ -21,6 +21,7 @@
 
 from os.path import isfile, isdir
 from getpass import getpass
+from ..dircrawler.filemodder import FileModder
 from ..utils.commoncmd import CommonCmd as cmd
 
 class EncryptionGUI:
@@ -109,7 +110,7 @@ class EncryptionGUI:
 			print('Use * to {} all files regardless of type (this can be dangerous).'.format(keyword))
 			print(' ')
 			raw_extension = input('Specify a file type [Optional]: ')
-			extension = self.scrambler.formatted_ext(raw_extension)
+			extension = FileModder.format_ext(raw_extension)
 			print(' ')
 			if extension == None:
 				confirm = input('Are you sure you want to {} all files of all types [y/n]: '.format(

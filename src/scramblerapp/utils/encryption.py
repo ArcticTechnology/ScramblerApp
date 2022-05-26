@@ -87,8 +87,12 @@ class OpenSSLEncyptor:
 		if exists(inpath) == False:
 			return {'status': 400, 'message': 'Error: Invalid input path.'}
 
-		_inpath = ' -in {}'.format(Crawler.escape(inpath))
-		_outpath = '' if outpath == None else ' -out {}'.format(Crawler.escape(outpath))
+		_inpath = ' -in {}'.format(Crawler.escape(Crawler.posixize(inpath)))
+		if outpath == None:
+			_outpath = ''
+		else:
+			_outpath = ' -out {}'.format(Crawler.escape(Crawler.posixize(outpath)))
+
 		c = 'openssl aes-256-cbc{d} -a -salt{p}{i}{o} -pass pass:{pa}'.format(
 						d=_d,p=_pbkdf2,i=_inpath,o=_outpath,pa=passwd)
 		command = shlex.split(c)
@@ -113,9 +117,9 @@ class OpenSSLEncyptor:
 		else:
 			result['status'] = 400
 			if decrypt == True:
-				result['message'] = 'Error: Failed to decrypt message, make sure your password is correct.'
+				result['message'] = 'Error: Failed to decrypt file, make sure your password is correct.'
 			else:
-				result['message'] = 'Error: Encryption failed, could not encrypt message.'
+				result['message'] = 'Error: Encryption failed, could not encrypt file.'
 			return result
 
 	@classmethod
