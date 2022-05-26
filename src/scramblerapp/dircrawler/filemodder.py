@@ -91,19 +91,22 @@ class FileModder:
 	@classmethod
 	def add_tag(self, filepath: str, tag: str, oldtags: list = [],
 				newtags: list = [], spliton: str = '-') -> str:
+		newtags_complete = [spliton + t for t in newtags]
+		oldtags_complete = [spliton + t for t in oldtags]
+
 		rootdir = Crawler.get_rootdir(filepath)
 		prefix = Crawler.get_prefix(filepath)
 		extension = Crawler.get_extension(filepath)
 
-		existing_tag = prefix.split(spliton)[-1]
+		existing_tag = spliton + prefix.split(spliton)[-1]
 
 		# If tag already applied then do not apply tag.
-		if existing_tag in newtags:
+		if existing_tag in newtags_complete:
 			return filepath
 
-		if existing_tag in oldtags:
+		if existing_tag in oldtags_complete:
 			#If existing tag is in old tags, then update it to tag.
-			filename = prefix.split(existing_tag)[0] + tag + extension
+			filename = prefix.split(existing_tag)[0] + spliton + tag + extension
 			return Crawler.joinpath(rootdir, filename)
 		else:
 			filename = prefix + spliton + tag + extension
