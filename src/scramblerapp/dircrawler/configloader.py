@@ -103,16 +103,16 @@ class ConfigLoader:
 			content = ''.join(FileModder.read_file(self.configfile))
 		except:
 			return {'status': 400,
-						'message': 'Error: config file could not be read.', 'data': None}
+						'message': 'Error: config file could not be read.', 'output': None}
 
 		try:
 			result = json.loads(content)
 			return {'status': 200, 'message': 'Read config file complete.',
-					'data': result}
+					'output': result}
 		except:
 			return {'status': 400,
 				'message': 'Error: Failed to read config, invalid Json format.',
-				'data': None}
+				'output': None}
 
 	def hasEncyptedTag(self) -> bool:
 		filename = Crawler.get_basename(self.configfile)
