@@ -13,9 +13,9 @@ For Mac, this app should work on the Mac terminal. Mac typically comes with Libr
 For Linux, this app should work out of the box on the Linux terminal, but make sure you also have Python3, Pip3, and OpenSSL as described below.
 
 Requirements:
-* Python3 (version 3.8 or greater) - Install Python3 here: [https://www.python.org/downloads/]. Check version with: ```python3 --version```.
-* Pip3 (version 20.2.1 or greater) - Make sure to install python3-pip in order to use pip install. Check version with: ```pip3 --version```.
-* OpenSSL (version 1.1.1 or greater) - See wiki for details: [https://en.wikipedia.org/wiki/OpenSSL]. Check version with: ```openssl version```.
+* Python3 (version 3.10 or greater) - Install Python3 here: [https://www.python.org/downloads/]. Check version with: ```python3 --version```.
+* Pip3 (version 23.0 or greater) - Make sure to install python3-pip in order to use pip install. Check version with: ```pip3 --version```.
+* OpenSSL (version 3.0.2 or greater) - See wiki for details: [https://en.wikipedia.org/wiki/OpenSSL]. Check version with: ```openssl version```.
 
 ## Installation
 There are a couple of options to install this app:
@@ -77,35 +77,11 @@ cipher: U2FsdGVkX1/2GRhgqsfjLUTxNpCrhe724CFnSydrrtM=
 
 3. Columns in a Dataframe - Lastly, you can encrypt specific pieces of data in a dataframe. Oftentimes you may have a data frame where only specific columns have sensitive information. This app allows you to encrypt those columns without altering the rest of the data set. Currently, this feature is not available.
 
-### Stash
-The Scrambler app also allows you to obfuscate files through the stash feature. Stash allows you to map files to alias names and a pre-defined location. Then the Scrambler will alter the name and move it to the pre-defined location, and then scramble the metadata of the files and directories to hide the file. At any time, Scrambler can retrieve the stashed files by providing a password. In order to use stash you have to setup a config file that tells the Scrambler where to send your stashed files to and what their new names will be.
-
-Instructions on creating a config file:
-1. Create your .config based off of config-example.txt file in this repository [https://github.com/ArcticTechnology/ScramblerApp/tree/main/config]. The .config file follows JSON formatting and should contain these pieces of data:
-```
-{"origin_dir": "/home/origin_directory/",
-"stash_dir": "/home/stash_directory/",
-"stash_key": {
-"filename1": "stashed_filename1",
-"filename2": "stashed_filename2",
-"filename3": "stashed_filename3"}}
-```
-* ```"origin_dir": "/home/origin_directory/"``` - This is the directory where the files you want to stash are located.
-* ```"stash_dir": "/home/stash_directory/"``` - This is the directory where you want to stash your files.
-* ```"filename1": "stashed_filename1"``` - This is the mapping of the original file name and the name you want the new file name you want the file to be changed to.
-
-2. Save your file as .config and place it into your scrambler app's config folder. Here is an example of what the directory looks like:
-```
-C:/Users/username/AppData/Local/Python3/ScramblerApp/config
-```
-3. Highly recommended: Password encrypt this .config file with the Scrambler app. This will create .config-c which is still recognizable by Scrambler.
-4. Highly recommended: Once you have the encrypted version (.config-c) you can delete the original .config file as it is no longer needed. You defeat the purpose of an encrypted config file if the unencrypted version is still lying around. Note if stash detects an unencrypted version, you can choose to have stash encrypt it for you which will automatically delete the original.
-
 ### Timetravel
-Timetravel is another obfuscation feature of the Scrambler app. Timetravel alter the metadata of all files and folders in a directory and subdirectories. Specifically it forces their date and time metadatas to be scrambled to some time in the past. This makes it so that you will not be able to determine when a file or folder was last touched or altered. To do this, simply set a working directory and run timetravel. The Scrambler will crawl through the working directory and its subdirectory and attempt to scramble the metadata of every file and folder it finds.
+Timetravel is an obfuscation feature of the Scrambler app. Timetravel alter the metadata of all files and folders in a directory and subdirectories. Specifically it forces their date and time metadatas to be scrambled to some time in the past. This makes it so that you will not be able to determine when a file or folder was last touched or altered. To do this, simply set a working directory and run timetravel. The Scrambler will crawl through the working directory and its subdirectory and attempt to scramble the metadata of every file and folder it finds.
 
 ### Conclusion
-With the Scrambler, you can now secure your messages, files, and data. Easily password encrypt sensitive information and obfuscate important files from view. Hope you enjoy.
+With the Scrambler, you can now secure your messages, files, and data. Easily password encrypt all of your sensitive information. Hope you enjoy.
 
 ## Troubleshooting
 This section goes over some of the common issues found and how to resolve them.

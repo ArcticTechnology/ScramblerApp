@@ -93,6 +93,6 @@ class DataModder:
 		except:
 			return {'status': 400, 'message': 'Error: Failed to write data to csv.'}
 
-# To Do: Create a way to modify Excel files. Use case:
+# To Do for SimpleWallet: Create a way to modify Excel files. Use case:
 #	{'address': ['ExampleAddress'],
 #	'privkey': ['ExampleKey']}

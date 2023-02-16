@@ -21,7 +21,7 @@
 
 import shlex; import subprocess
 from os import remove
-from os.path import isfile, isdir, exists
+from os.path import isdir, exists
 from typing import Type, Union
 from random import randrange
 from datetime import datetime, timedelta
@@ -77,129 +77,6 @@ class Scrambler:
 		output.append(self.timetravel(path)['message'])
 
 		return {'status': 200, 'message': 'Timetravel folders complete.', 'output': output}
-
-	def invalid_stash_data(self, data: dict) -> bool:
-		no_origin_dir = 'origin_dir' not in data
-		no_stash_dir = 'stash_dir' not in data
-		no_stash_key = 'stash_key' not in data
-		if no_origin_dir or no_stash_dir or no_stash_key:
-			return True
-		if type(data['origin_dir']) != str or type(data['stash_dir']) != str:
-			return True
-		if type(data['stash_key']) != dict:
-			return True
-		stash_key = data['stash_key']
-		keys = list(stash_key.keys())
-		values = list(stash_key.values())
-		if len(keys) == 0 or len(values) == 0: return True
-		if len(keys) != len(values): return True
-		return False
-
-	def stash(self, curr_filename: str, curr_dir: str, new_filename: str,
-			new_dir: str,overwrite: bool = False, remove: bool = False,
-			retrieve: bool = False) -> dict:
-		curr_filepath = Crawler.joinpath(curr_dir, curr_filename)
-		result = {'status': None, 'message': None}
-
-		if exists(curr_filepath) != True:
-			result['status'] = 400
-			if retrieve == True:
-				result['message'] = 'Error: Retrieval failed, specified file not found in stashed directory.'
-			else:
-				result['message'] = 'Error: File not found {}'.format(str(curr_filepath))
-			return result
-
-		if isfile(curr_filepath) != True: 
-			result['status'] = 400
-			if retrieve == True:
-				result['message'] = 'Error: Retrieval failed, specified file in stashed directory is corrupt.'
-			else:
-				result['message'] = 'Error: File is corrupt {}'.format(str(curr_filepath))
-			return result
-
-		new_filepath = Crawler.joinpath(new_dir, new_filename)
-		if exists(new_filepath) == True and overwrite == False:
-			result['status'] = 400
-			if retrieve == True:
-				result['message'] = 'Error: File already exists {}'.format(str(new_filepath))
-			else:
-				result['message'] = 'Error: Stash failed, file already exists in stashed directory.'
-			return result
-
-		response = cmd.copyfile(curr_filepath, new_filepath)
-		if response['status'] != 200: return response
-		self.timetravel(new_filepath)
-		if remove == True: 
-			try:
-				remove(curr_filepath)
-			except:
-				if retrieve == True:
-					result['message'] = 'Error: Failed to remove file from stashed directory'
-				else:
-					result['message'] = 'Error: Failed to remove {}'.format(str(curr_filepath))
-		return response
-
-	def stash_all(self, data: dict, retrieve: bool = False) -> dict:
-		"""
-		Data format:
-		{"origin_dir": "/home/origin_directory/",
-		"stash_dir": "/home/stash_directory/",
-		"stash_key": {
-		"filename1": "stashed_filename1",
-		"filename2": "stashed_filename2",
-		"filename3": "stashed_filename3"}}
-		"""
-		result = {'status': None, 'message': None, 'output': []}
-		origin_dir = Crawler.posixize(data['origin_dir'])
-		stash_dir = Crawler.posixize(data['stash_dir'])
-
-		if isdir(origin_dir) == False: return {'status': 400,
-				'message': 'Error: Could not find origin directory {}'.format(str(origin_dir)), 'output': []}
-
-		if isdir(stash_dir) == False: return {'status': 400,
-				'message': 'Error: Could not find stash directory. Directory invalid or missing.', 'output': []}
-
-		stash_key = data['stash_key']
-		keys = list(stash_key.keys())
-		values = list(stash_key.values())
-		statuscodes = []
-
-		for i in range(len(keys)):
-			if keys[i] == '' or values[i] == '': return {'status': 400,
-				'message': 'Error: Invalid config file, keys and values cannot be blank.',
-				'output': []}
-
-		for i in range(len(keys)):
-			if retrieve == True:
-				response = self.stash(values[i],stash_dir,keys[i],origin_dir,
-										overwrite=False,remove=False,retrieve=retrieve)
-			else:
-				response = self.stash(keys[i],origin_dir,values[i],stash_dir,
-										overwrite=True,remove=True,retrieve=retrieve)
-			statuscodes.append(response['status'])
-			result['output'].append(response['message'])
-
-		if retrieve == True:
-			keyword = 'Retrieve'
-			if len(statuscodes) > 1 and 200 not in statuscodes:
-				result['status'] = 400
-				result['message'] = 'Error: No stashed files retrieved. Specified files did not exist.'
-				return result
-		else:
-			keyword = 'Stash'
-			if len(statuscodes) > 1 and 200 not in statuscodes:
-				result['status'] = 400
-				result['message'] = 'Error: No files to stash found in {}'.format(str(origin_dir))
-				return result
-			timetravel = self.timetravel(stash_dir)
-			if timetravel['status'] == 200:
-				result['output'].append('Timetravel completed for stash directory.')
-			else:
-				result['output'].append('Error timetravelling stash directory.')
-
-		result['status'] = 200
-		result['message'] = '{} completed.'.format(str(keyword))
-		return result
 
 	def encrypt_msg(self, password: str, message: str, decrypt: bool = False) -> dict:
 		data = {'format': 'text', 'input': message, 'outpath': None}
@@ -285,11 +162,10 @@ class Scrambler:
 
 class ScramblerGUI:
 
-	def __init__(self, scrambler, instance, encryptiongui, stashgui):
+	def __init__(self, scrambler, instance, encryptiongui):
 		self.scrambler = scrambler
 		self.instance = instance
 		self.encryptiongui = encryptiongui
-		self.stashgui = stashgui
 
 	def splashscreen(self):
 		cmd.clear()
@@ -299,7 +175,7 @@ class ScramblerGUI:
 		print('version: ' + self.instance.version_text)
 		print(' ')
 		print('What would you like to do?')
-		print('(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit')
+		print('(s) Set Dir, (e) Encrypt, (d) Decrypt, (t) Timetravel, (q) Quit')
 
 	def comingsoon(self):
 		cmd.clear()
@@ -381,8 +257,8 @@ class ScramblerGUI:
 			self.optionscreen()
 			select = input()
 
-			if select not in ('pwd','ls','s','e','d','st','t','q'):
-				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (st) Stash, (t) Timetravel, (q) Quit'
+			if select not in ('pwd','ls','s','e','d','t','q'):
+				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (t) Timetravel, (q) Quit'
 				cmd.clear(); print('Invalid selection. Try again.')
 
 			if select == 'q':
@@ -403,9 +279,6 @@ class ScramblerGUI:
 
 			if select == 'd':
 				self.encryptiongui.run(decrypt=True)
-
-			if select == 'st':
-				self.stashgui.run()
 
 			if select == 't':
 				self.option_t()
