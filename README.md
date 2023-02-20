@@ -1,16 +1,16 @@
 # Scrambler App
-The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. See the "Documentation" section below for more details.
+The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data. It leverages OpenSSL AES-256 with PBKDF2 to encrypt contents. See the "Documentation" section of this guide for more details.
 * Github repo: https://github.com/ArcticTechnology/ScramblerApp
 * PyPi: https://pypi.org/project/ScramblerApp/
 
 ![alt text](https://github.com/ArcticTechnology/ScramblerApp/blob/main/doc/scrambler-preview.gif?raw=true)
 
 ## Prerequisites
-For Windows, it is recommended to run this app on a Linux emulation layer such as the Git Bash terminal. See the "Instructions for Git Bash" section for details. In addition to Git Bash, make sure you also have Python3, Pip3, and OpenSSL as described below.
+For Windows, it is recommended to run this app on a Linux emulation layer such as the Git Bash terminal. See the "Instructions for Git Bash" section for details. In addition to Git Bash, make sure you have Python3, Pip3, and OpenSSL as described below.
 
-For Mac, this app should work on the Mac terminal. Mac typically comes with LibreSSL by default and this app is compatible with LibreSSL. However, LibreSSL is missing the key derivation: pbkdf2. It is recommended that you install and use OpenSSL instead. Make sure you also have Python3 and Pip3 as described below.
+For Mac, this app should work on the Mac terminal. Mac typically comes with LibreSSL by default and this app is compatible with LibreSSL. However, LibreSSL is missing the key derivation: pbkdf2. It is recommended that you install and use OpenSSL instead. Make sure you have Python3 and Pip3 as described below.
 
-For Linux, this app should work out of the box on the Linux terminal, but make sure you also have Python3, Pip3, and OpenSSL as described below.
+For Linux, this app should work out of the box on the Linux terminal, but make sure you have Python3, Pip3, and OpenSSL as described below.
 
 Requirements:
 * Python3 (version 3.10 or greater) - Install Python3 here: [https://www.python.org/downloads/]. Check version with: ```python3 --version```.

@@ -92,7 +92,3 @@ class DataModder:
 			return {'status': 200, 'message': 'File created: {}'.format(outpath)}
 		except:
 			return {'status': 400, 'message': 'Error: Failed to write data to csv.'}
-
-# To Do for SimpleWallet: Create a way to modify Excel files. Use case:
-#	{'address': ['ExampleAddress'],
-#	'privkey': ['ExampleKey']}

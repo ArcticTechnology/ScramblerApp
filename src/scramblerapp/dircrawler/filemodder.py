@@ -70,24 +70,6 @@ class FileModder:
 		else:
 			return raw_extension
 
-	def add_extension(self, wd: str, extension: str):
-		# To Do: Create a new add_extension when building Simple Wallet
-		# Need to make a add_extension to single file, then create add_extension_to_all
-		if extension == None or '.' not in extension:
-			return 'No extension found.'
-
-		filepaths = Crawler.get_files(wd, extension=None)
-
-		if len(filepaths) <= 0:
-			return 'No files found.'
-
-		for filepath in filepaths:
-			if '.' not in filepath:
-				os.rename(filepath, filepath+extension)
-				print('Renamed: ' + str(filepath)) #Get rid of printing. Have it return dict.
-
-		return Crawler.get_files(wd, extension)
-
 	@classmethod
 	def add_tag(self, filepath: str, tag: str, oldtags: list = [],
 				newtags: list = [], spliton: str = '-') -> str:
@@ -113,8 +95,7 @@ class FileModder:
 			return Crawler.joinpath(rootdir, filename)
 
 	@classmethod
-	def add_rtag(self, filepath: str, length: int = 5, spliton: str = '-') -> str:
-		"""Adding a randomized tag."""
+	def add_randomized_tag(self, filepath: str, length: int = 5, spliton: str = '-') -> str:
 		if length < 4: length = 4
 		if length > 10: length = 10
 		rootdir = Crawler.get_rootdir(filepath)
