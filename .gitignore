@@ -4,10 +4,7 @@
 *.pyc
 *.tmp
 *.egg-info/
-.config
-.config-c
-.config-d
-.config-NAKED
+.config*
 .DS_Store
 .idea
 .installed.cfg
@@ -16,10 +13,12 @@
 .cache/
 .ipynb_checkpoints/
 .idea/
+.vscode/
 __pycache__/
 bin/
 develop-eggs/
 node_modules/
+package-lock.json
 Libraries/
 build/
 coverage/
@@ -38,3 +37,14 @@ integration/kite-allure-reports
 integration/logs
 tmp/
 venv/
+
+# Github Pages
+*.gem
+.bundle
+.sass-cache
+.jekyll-metadata
+.jekyll-cache
+Gemfile.lock
+vendor/
+_site/
+assets/js/dist/
