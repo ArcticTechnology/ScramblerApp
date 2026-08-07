@@ -1,14 +1,13 @@
-#!/usr/bin/python3 -B
-from .scrambler import Scrambler, ScramblerGUI
-from .gui.encryptiongui import EncryptionGUI
-from .gui.instance import Instance
+from .scrambler import ScramblerAppHome
+from .utils.base import Scrambler
+
 
 def main():
-	scrambler = Scrambler()
-	instance = Instance()
-	encryptiongui = EncryptionGUI(scrambler, instance)
-	scramblergui = ScramblerGUI(scrambler, instance, encryptiongui)
-	scramblergui.run()
+    scrambler = Scrambler()
 
-if __name__ == "__main__":
-	raise SystemExit(main())
+    app = ScramblerAppHome(scrambler)
+    app.cmdloop()
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

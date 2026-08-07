@@ -19,266 +19,573 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import shlex; import subprocess
-from os import remove
-from os.path import isdir, exists
-from typing import Type, Union
-from random import randrange
-from datetime import datetime, timedelta
-from .dircrawler.crawler import Crawler
-from .dircrawler.filemodder import FileModder
-from .utils.commoncmd import CommonCmd as cmd
-from .utils.encryption import OpenSSLEncyptor as ossl
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
 
-class Scrambler:
+import cmd2
+from cmd2.string_utils import strip_quotes
+from platformdirs import PlatformDirs
 
-	def random_time(self) -> str:
-		end = datetime.now()
-		start = datetime.strptime('1/1/2005 12:00 AM', '%m/%d/%Y %I:%M %p')
-		delta = end - start
-		int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
-		random_second = randrange(int_delta)
-		return str(start + timedelta(seconds=random_second))
+from .utils.commoncmd import CommonCmd
+from .utils.encryption import OpenSSLEncyptor
+from .workflow import workflow
 
-	def timetravel(self, path: str) -> dict:
-		ppath = Crawler.escape(Crawler.posixize(path))
-		command = shlex.split('touch -d "{t}" {p}'.format(t=self.random_time(),p=ppath))
-		process = subprocess.run(command,
-					stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
-		returncode = process.returncode
+class Instance:
 
-		if returncode == 0:
-			return {'status': 200, 'message': 'Timetravelled: ' + str(path)}
-		else:
-			return {'status': 400, 'message': 'Error timetravelling: ' + str(path)}
+    def __init__(self):
+        openssl = OpenSSLEncyptor.get_version()
+        if openssl['status'] == 400:
+            failure_msg1: str = '\n OpenSSL is required to run this app. Make sure you have OpenSSL installed.'
+            failure_msg2: str = '\n Use command `openssl version` to check your openssl version.'
+            raise Exception(openssl['message'] + ' ' + failure_msg1 + ' ' +
+                            failure_msg2)
 
-	def timetravel_files(self, path: str,
-						extension: Union[str, Type[None]] = None) -> dict:
-		files = Crawler.get_files(path, extension=extension)
+        self.version_text = openssl['message']
+        self.raw = openssl['raw']
 
-		if len(files) <= 0:
-			return {'status': 400, 'message': 'Error timetravelling: no files found.', 'output': []}
+        self.app_paths = PlatformDirs('scramblerapp')
+        self.settings_file: pathlib.Path = self.app_paths.user_config_path / 'config.json'
 
-		output = [self.timetravel(f)['message'] for f in files]
-		return {'status': 200, 'message': 'Timetravel files complete.', 'output': output}
+        self.set_settings()
+        ok, message = self.load_settings()
+        if not ok:
+            print(f'Error: unable to load settings: {message}')
+            sys.exit(1)
 
-	def timetravel_folders(self, path: str) -> dict:
-		folders = Crawler.get_folders(path)
+    def get_crypto_suite_mappings(self, encrypt: bool = True) -> str:
+        """Map raw engine and version to uniform short outputs."""
+        start: str
+        if encrypt:
+            match self.raw['engine']:
+                case 'openssl':
+                    start = 'ossl'
+                case 'libressl':
+                    start = 'lssl'
+                case 'cryptography':
+                    start = 'pycrypt'
 
-		if exists(path) != True:
-			return {'status': 400, 'message': 'Error timetravelling: no directory found.', 'output': []}
+            return '.'.join([start, self.raw['version']])
+        else:
+            return 'NAKED'
 
-		if len(folders) <= 0:
-			output = ['No folders found to timetravel, no action taken.']
-		else:
-			output = [self.timetravel(folder)['message'] for folder in folders]
+    def set_settings(self):
+        # Get defaults.
+        self.encrypted_file_suffix: str = self.get_crypto_suite_mappings(True)
+        self.decrypted_file_suffix: str = self.get_crypto_suite_mappings(False)
+        self.crypto_backend: str = 'openssl'
 
-		output.append(self.timetravel(path)['message'])
+    def clean_file_suffix(self, suffix: str):
+        return suffix.strip('-')
 
-		return {'status': 200, 'message': 'Timetravel folders complete.', 'output': output}
+    def _is_valid_file_suffix(self, suffix: str) -> bool:
+        # Avoid (/ o \), forbidden Windows chars or empty spaces and some
+        # other special chars.
+        pattern: str = r'^[^<>:"/\\|?*\s\.,]+$'
+        if re.match(pattern, suffix):
+            return True
+        else:
+            return False
 
-	def encrypt_msg(self, password: str, message: str, decrypt: bool = False) -> dict:
-		data = {'format': 'text', 'input': message, 'outpath': None}
-		result = ossl.encrypt(password, data, decrypt)
-		return result
+    def _is_valid_crypto_backend(self, backend: str) -> bool:
+        if backend in ['openssl', 'libressl', 'cryptography']:
+            return True
+        else:
+            return False
 
-	def encrypt_file(self, password: str, filepath: str, decrypt: bool = False,
-					keep_org: bool = False, naked: bool = False) -> dict:
-		result = {'status': None, 'message': None}
-		tag_options = {'encrypt' : ['c'],
-			'decrypt' : ['d', 'NAKED']}
+    def load_settings(self) -> [bool, str]:
+        self.app_paths.user_config_path.mkdir(parents=True, exist_ok=True)
 
-		if decrypt == True:
-			index = 1 if naked == True else 0
-			tag = tag_options['decrypt'][index]
-			oldtags = tag_options['encrypt']
-			newtags = tag_options['decrypt']
-		else:
-			tag = tag_options['encrypt'][0]
-			oldtags = tag_options['decrypt']
-			newtags = tag_options['encrypt']
+        if self.settings_file.is_file():
+            try:
+                payload: str = self.settings_file.read_text(encoding='utf-8')
+                data: dict[str] = json.loads(payload)
 
-		clean_filepath = Crawler.posixize(filepath)
-		outpath = FileModder.add_tag(clean_filepath,tag,oldtags,newtags)
+                self.decrypted_file_suffix = self.clean_file_suffix(
+                    data.get('decrypted_file_suffix',
+                             self.decrypted_file_suffix))
+                self.encrypted_file_suffix = self.clean_file_suffix(
+                    data.get('encrypted_file_suffix',
+                             self.encrypted_file_suffix))
+                self.crypto_backend = data.get('crypto_backend',
+                                               self.crypto_backend)
 
-		if exists(clean_filepath) == False:
-			result['status'] = 400
-			result['message'] = 'Error failed to find file: ' + str(clean_filepath)
-			return result
+                if not self._is_valid_file_suffix(self.decrypted_file_suffix):
+                    return False, f'"{self.decrypted_file_suffix}" is not a valid decrypted file suffix'
+                if not self._is_valid_file_suffix(self.encrypted_file_suffix):
+                    return False, f'"{self.encrypted_file_suffix}" is not a valid encrypted file suffix'
+                if not self._is_valid_crypto_backend(self.crypto_backend):
+                    return False, f'"{self.crypto_backend} is not a valid crypto backend'
 
-		if exists(outpath) == True:
-			result['status'] = 400
-			result['message'] = 'Error output path already exists: ' + str(outpath)
-			return result
+                return True, ''
+            except Exception as e:
+                return False, e
+        else:
+            # Use default settings.
+            return True, 'file not found'
 
-		if outpath == clean_filepath:
-			result['status'] = 400
-			result['message'] = 'Action already performed on: ' + str(clean_filepath)
-			return result
+    def save_settings(self) -> [bool, str]:
+        data: dict[str] = {
+            'decrypted_file_suffix': self.decrypted_file_suffix,
+            'encrypted_file_suffix': self.encrypted_file_suffix,
+            'crypto_backend': self.crypto_backend,
+        }
 
-		data = {'format': 'file', 'input': clean_filepath, 'outpath': outpath}
-		response = ossl.encrypt(password, data, decrypt)
-		if response['status'] == 400:
-			try:
-				remove(outpath)
-			except:
-				pass
-			return response
+        try:
+            # Bytes written.
+            bts: int = self.settings_file.write_text(json.dumps(data),
+                                                     encoding='utf-8')
+            return True, str(bts)
+        except Exception as e:
+            return False, e
 
-		self.timetravel(outpath)
 
-		if keep_org == True:
-			result['status'] = response['status']
-			result['message'] = response['message'] + ' (original retained).'
-			return result
+class BaseMenu(cmd2.Cmd):
 
-		try:
-			remove(clean_filepath)
-			result['status'] = 200
-			result['message'] = response['message'] + ' (original deleted).'
-		except:
-			result['status'] = 400
-			result['message'] = response['message'] + ' (Error deleting original).'
+    def __init__(self,
+                 allowed_commands,
+                 scrambler,
+                 submenu_type: str,
+                 commands_that_clear_screen: list[str] = []):
+        super().__init__(include_py=False, include_ipy=False)
+        self.my_commands = allowed_commands
 
-		return result
+        # App specific settings.
+        self.scrambler = scrambler
+        self.instance = Instance()
+        self.working_directory: pathlib.Path = pathlib.Path.cwd()
 
-	def encrypt_all_files(self, password: str, wd: str,
-					extension: Union[str, Type[None]] = None, decrypt: bool = False,
-					keep_org: bool = False, naked: bool = False) -> dict:
-		filepaths = Crawler.get_files(wd, extension=extension)
-		if len(filepaths) <= 0: return {'status': 400, 'message': 'Error: No files found.', 'output': []}
+        # Hide all built-in cmd2 commands.
+        for cmd_name in self.get_all_commands():
+            if cmd_name not in self.my_commands:
+                self.hidden_commands.append(cmd_name)
 
-		output = [self.encrypt_file(password,filepath,decrypt=decrypt,
-					keep_org=keep_org,naked=naked)['message'] for filepath in filepaths]
+        self._from_home_menu = True
+        self.submenu_type: str = submenu_type
+        self.commands_that_clear_screen: list[str] = commands_that_clear_screen
 
-		timetravel = self.timetravel_folders(wd)
-		if timetravel['status'] != 200 or len(timetravel['output']) == 0:
-			output.append('Error timetravelling folders, timetravelling skipped.')
-		else:
-			for o in timetravel['output']: output.append(o)
+    def _clear_terminal(self):
+        if os.name == 'nt':
+            subprocess.run('cls')
+        else:
+            subprocess.run('clear')
+            # Remove scrollback.
+            print('\033[3J', end='', flush=True)
+        self.current_line = ''
 
-		return {'status': 200, 'message': 'Encrypt all files complete.', 'output': output}
+        # ANSI code alternative
+        # self.poutput('\x1b[H\x1b[2J', end='')
 
-class ScramblerGUI:
+    def precmd(self, line):
+        sanitized: str = line.command.strip()
+        command: str = sanitized.split()[0] if sanitized else ''
 
-	def __init__(self, scrambler, instance, encryptiongui):
-		self.scrambler = scrambler
-		self.instance = instance
-		self.encryptiongui = encryptiongui
+        if command in self.commands_that_clear_screen:
+            self._clear_terminal()
 
-	def splashscreen(self):
-		cmd.clear()
-		print('Welcome to the Scrambler!')
+        # precmd must return the line to pass it to the command executor.
+        return line
 
-	def optionscreen(self):
-		print('version: ' + self.instance.version_text)
-		print(' ')
-		print('What would you like to do?')
-		print('(s) Set Dir, (e) Encrypt, (d) Decrypt, (t) Timetravel, (q) Quit')
+    def clear_and_show_help(self,
+                            menu_name: str = f'Scrambler App',
+                            question: str = f'What would you like to do?'):
+        self._clear_terminal()
 
-	def comingsoon(self):
-		cmd.clear()
-		print('Feature not yet available, no action taken.')
+        self.poutput(f'=== {menu_name} ===')
+        self.poutput()
 
-	def option_pwd(self):
-		cmd.clear()
-		if self.instance.wd == None:
-			print('Error: No working directory set. Please set working directory first.'); return
-		else:
-			print('Working directory: {}'.format(cmd.pwd())); return
+        if self.submenu_type == 'settings':
+            # Use specific layout.
+            self.poutput(f'Current Directory: {self.working_directory}')
+            func = getattr(self, f'do_s')
+            self.poutput(f'(s) {func.__doc__}')
 
-	def option_ls(self):
-		cmd.clear()
-		if self.instance.wd == None:
-			print('Error: No working directory set. Please set working directory first.'); return
+            self.poutput()
+            self.poutput(f'Selected Algorithm: {self.instance.version_text}')
+            func_o = getattr(self, f'do_o')
+            func_p = getattr(self, f'do_p')
+            self.poutput(
+                f'(o) {self.instance.version_text} (p) Python Cryptography')
 
-		ls = cmd.ls()
+            # Disable.
+            """
+            self.poutput()
+            self.poutput(f'Encrypted File Suffix:')
+            func_es = getattr(self, f'do_es')
+            self.poutput(f'(es) {func_es.__doc__}')
 
-		if len(ls) == 0:
-			print('Working directory is empty.'); return
-		else:
-			print(' '.join(ls)); return
+            self.poutput()
+            self.poutput(f'Decrypted File Suffix:')
+            func_ds = getattr(self, f'do_ds')
+            self.poutput(f'(ds) {func_ds.__doc__}')
+            """
 
-	def option_s(self):
-		print(' ')
-		print('What directory do you want to set as your working directory?')
-		raw_wd = input()
-		cmd.clear()
-		setwd = self.instance.set_wd(raw_wd)
-		print(setwd['message'])
-		return
+            self.poutput()
+            self.poutput(f'More')
+            func_a = getattr(self, f'do_a')
+            func_pwd = getattr(self, f'do_pwd')
+            func_ls = getattr(self, f'do_ls')
+            self.poutput(f'{"(a)":<5} {func_a.__doc__}')
+            self.poutput(f'{"(pwd)":<5} {func_pwd.__doc__}')
+            self.poutput(f'{"(ls)":<5} {func_ls.__doc__}')
 
-	def option_t(self):
-		cmd.clear()
-		if self.instance.wd == None:
-			print('Error: No working directory set. Please set working directory first.'); return
+            self.poutput()
+            self.poutput(f'Back')
+            func = getattr(self, f'do_b')
+            self.poutput(f'(b) Back')
 
-		print('Warning: You are about to timetravel all files and folders in the following directory and its subdirectories.')
-		print('Timetravel will alter the metadata to a scrambled date/time in the past of everything in:')
-		print(self.instance.wd)
-		print(' ')
-		print('You may specify a file type. Leaving blank will default to .txt files.')
-		print('Use * for all files regardless of type (this can be dangerous).')
-		print(' ')
-		raw_extension = input('Specify a file type [Optional]: ')
-		extension = FileModder.format_ext(raw_extension, ifblank='.txt')
-		print(' ')
-		if extension == None:
-			confirm = input('Are you sure you want to timetravel all folders and files of all types [y/n]: ')
-		else:
-			confirm = input('Are you sure you want to timetravel all folders and files with extension {} [y/n]: '.format(extension))
-		cmd.clear()
-		if confirm != 'y': print('Exited, no action taken.'); return
-		if isdir(self.instance.wd) != True: print('Invalid path, no action taken.'); return
+        else:
+            self.poutput(question)
 
-		print('Timetravel started...')
-		tt_files = self.scrambler.timetravel_files(self.instance.wd, extension=extension)
-		if tt_files['status'] != 200 or len(tt_files['output']) == 0:
-			print('No files found to timetravel, no action taken.')
-		else:
-			for f in tt_files['output']: print(f)
+            for cmd_name in self.my_commands:
+                if cmd_name == 'help':
+                    continue
+                func = getattr(self, f'do_{cmd_name}')
+                # Read help from docstrings.
+                self.poutput(f'{"(" + cmd_name + ")":<6} {func.__doc__}')
 
-		tt_folders = self.scrambler.timetravel_folders(self.instance.wd)
-		if tt_folders['status'] != 200 or len(tt_folders['output']) == 0:
-			print('No folders found to timetravel, no action taken.')
-		else:
-			for folder in tt_folders['output']: print(folder)
+        self.poutput()
 
-		print(' ')
-		print('Timetravel complete.')
-		input(); cmd.clear(); return
+    def onecmd_plus_hooks(self, line: str, *args, **kwargs) -> bool:
+        """CLI Entry point."""
+        # See
+        # https://cmd2.readthedocs.io/en/latest/api/cmd/#cmd2.Cmd.onecmd_plus_hooks
+        if not line.strip():
+            # User did not type a command: clear the terminal
+            self.clear_and_show_help()
 
-	def run(self):
-		cmd.clear()
-		self.splashscreen()
+            # Always process commands, do not quit.
+            return False
 
-		while True:
-			self.optionscreen()
-			select = input()
+        # Normal execution.
+        return super().onecmd_plus_hooks(line, *args, **kwargs)
 
-			if select not in ('pwd','ls','s','e','d','t','q'):
-				#'(s) Set Dir, (e) Encrypt, (d) Decrypt, (t) Timetravel, (q) Quit'
-				cmd.clear(); print('Invalid selection. Try again.')
+    def do_help(self, args):
+        """Show available commands and descriptions."""
+        self.clear_and_show_help()
 
-			if select == 'q':
-				cmd.clear()
-				break
+    def postcmd(self, stop, line):
+        """Re-print help menu after each command."""
+        self.clear_and_show_help()
+        return stop
 
-			if select == 'pwd':
-				self.option_pwd()
+    def default(self, statement):
+        self.perror(f"Invalid selection: '{statement.command}'. Try again.")
+        if self._from_home_menu:
+            self.read_input('\nPress Enter to continue...')
 
-			if select == 'ls':
-				self.option_ls()
+    def do_pwd(self, args):
+        """Show current directory"""
+        self.poutput(f'Current directory:')
+        self.poutput()
+        self.poutput(f'{self.working_directory}')
+        if self.__class__.__name__ == 'ScramblerAppHome':
+            self.read_input('\nPress Enter to continue...')
 
-			if select == 's':
-				self.option_s()
+    def do_ls(self, args):
+        """List files"""
+        self.poutput(f'Directory listing:')
+        self.poutput()
+        [self.poutput(l) for l in CommonCmd.ls(self.working_directory)]
+        if self.__class__.__name__ == 'ScramblerAppHome':
+            self.read_input('\nPress Enter to continue...')
 
-			if select == 'e':
-				self.encryptiongui.run(decrypt=False)
 
-			if select == 'd':
-				self.encryptiongui.run(decrypt=True)
+class SettingsSubMenu(BaseMenu):
 
-			if select == 't':
-				self.option_t()
+    def __init__(self,
+                 scrambler,
+                 parent,
+                 working_directory: pathlib.Path = pathlib.Path.cwd()):
+        super().__init__(allowed_commands=[
+            'b', 'o', 'p', 'es', 'ds', 'a', 'help', 's', 'ls', 'pwd'
+        ],
+                         scrambler=scrambler,
+                         submenu_type='settings',
+                         commands_that_clear_screen=['a', 's', 'ls', 'pwd'])
+
+        self.prompt = '> '
+        self.working_directory = working_directory
+        self.parent = parent
+        self._from_home_menu = False
+
+    def clear_and_show_help(self):
+        super().clear_and_show_help('Settings')
+
+    def _change_suffix(self, encrypt: bool = True) -> bool:
+        adjective: str = 'decrypt'
+        if encrypt:
+            adjective = 'encrypt'
+
+        suffix: str = self.read_input(
+            f"Set a new {adjective}ed file suffix: ").strip()
+        if suffix:
+            if not self.instance._is_valid_file_suffix(suffix):
+                self.perror(
+                    f'error: "{suffix}" is not a valid {adjective}ed file suffix'
+                )
+                return False
+
+            if encrypt:
+                self.instance.encrypted_file_suffix = suffix
+            else:
+                self.instance.decrypted_file_suffix = suffix
+
+            ok: bool
+            message: str
+            ok, message = self.instance.save_settings()
+            if ok:
+                self.psuccess('settings saved')
+                return True
+            else:
+                self.perror(f'error saving settings:\n  {message}')
+                return False
+        else:
+            self.perror('error: suffix cannot be empty')
+            return False
+
+    def postcmd(self, stop, line):
+        if stop:
+            # Quit immediately if user wants to go back.
+            if line.command.strip() not in ['b', 'q']:
+                self.read_input('\nPress Enter to continue...')
+            return True
+
+        self.read_input('\nPress Enter to continue...')
+        self.clear_and_show_help()
+        return stop
+
+    def do_b(self, args):
+        """Back"""
+        return True
+
+    def do_s(self, args: str):
+        """Set Directory"""
+        path = args.strip() if args else ''
+
+        if not path:
+            self.pwarning(
+                'HINT: Press\n  <TAB> to browse and autocomplete\n  "../" + <TAB> to browse directories one level up\n  "." to select the current directory'
+            )
+            try:
+                path = self.read_input(
+                    prompt='Select a new working directory: ',
+                    completer=self.complete_s)
+            except (EOFError, KeyboardInterrupt):
+                self.pwarning('\nAborted.')
+                return False
+
+        # cmd2 automatically adds quotes to the prompt when using
+        # the tab autocompletion feature. If a file or directory,
+        # in any place below the current one contains a space, it adds
+        # a `"` quote; if a file contains `"` inside the name, cmd2
+        # uses `'` as quote instead. This quote is added to the prompt
+        # and passed as raw path. The only clean and simple cases
+        # is with standard file names.
+        path = path.strip()
+        old_path: str = path
+        path = strip_quotes(path)
+        # If unbalanced quotes, remove the first quote manually.
+        if path and path == old_path and path[0] in ['"', "'"]:
+            path = path[1:]
+
+        if not path:
+            return False
+
+        new_path: pathlib.Path = pathlib.Path(path).expanduser().resolve()
+
+        if not new_path.exists():
+            self.perror(f"Error: Path '{new_path}' does not exists.")
+            return False
+        elif not new_path.is_dir():
+            self.perror(f"Error: '{new_path}' is not a directory")
+            return False
+        else:
+            self.working_directory = new_path
+            os.chdir(str(new_path))
+
+        if self.parent:
+            self.parent.working_directory = new_path
+
+        return True
+
+    def complete_s(self, *args, **kwargs):
+        """Only show directories."""
+        text, line, begidx, endidx = args[-4:]
+
+        directory_filter = lambda p: pathlib.Path(p).is_dir()
+        return self.path_complete(text,
+                                  line,
+                                  begidx,
+                                  endidx,
+                                  path_filter=directory_filter)
+
+    def do_o(self, args):
+        """Use system's OpenSSL/LibreSSL binary."""
+        self.poutput('DUMMY select OpenSSL, exclude Cryptography...')
+        return True
+
+    def do_p(self, args):
+        """Use Python Cryptography library."""
+        return True
+
+    def do_a(self, args):
+        """About"""
+        self.poutput(
+            'The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data.'
+        )
+        return True
+
+    def do_ds(self, args):
+        """Set decrypted suffix"""
+        self._change_suffix(encrypt=False)
+
+    def do_es(self, args):
+        """Set encrypted suffix"""
+        self._change_suffix(encrypt=True)
+
+    # do_q = do_b
+
+
+class CryptoSubMenu(BaseMenu):
+
+    def __init__(self,
+                 scrambler,
+                 encrypt: bool = True,
+                 working_directory: pathlib.Path = pathlib.Path.cwd()):
+        super().__init__(
+            allowed_commands=['1', '2', '3', '4', 'b'],
+            scrambler=scrambler,
+            submenu_type='encrypt' if encrypt else 'decrypt',
+            commands_that_clear_screen=['1', '2', '3', '4', 'ls', 'pwd'])
+
+        self.working_directory = working_directory
+
+        # Hack to override the docstring.
+        self.do_c.__func__.__doc__ = 'Columns in a DataFrame'
+        self.do_d.__func__.__doc__ = 'All files in directory'
+        self.do_f.__func__.__doc__ = 'A file'
+        self.do_m.__func__.__doc__ = 'A message'
+
+        self.prompt = '> '
+        self.encrypt = encrypt
+        self._from_home_menu = False
+
+        self.statement_parser.allow_opening_quote = False
+        self.statement_parser.allow_closing_quote = False
+
+    def clear_and_show_help(self):
+        super().clear_and_show_help(
+            menu_name='Encrypt' if self.encrypt else 'Decrypt',
+            question=
+            f'What would you like to {"encrypt" if self.encrypt else "decrypt"}?'
+        )
+
+    def postcmd(self, stop, line):
+        if stop:
+            # Quit immediately if user wants to go back.
+            if line.command.strip() not in ['b', 'q']:
+                self.read_input('\nPress Enter to continue...')
+            return True
+
+        self.read_input('\nPress Enter to continue...')
+        self.clear_and_show_help()
+        return stop
+
+    def do_b(self, args):
+        """Back"""
+        return True
+
+    def do_m(self, args):
+        """Cipher/Decypher message."""
+        wf = workflow.MessageCryptoWorkflow(menu_instance=self)
+        return wf.start()
+
+    def do_f(self, args):
+        """Cipher/Decypher files."""
+        wf = workflow.FileCryptoWorkflow(
+            menu_instance=self,
+            resource_type='file',
+            working_directory=self.working_directory)
+        return wf.start(args)
+
+    def do_d(self, args):
+        """Cipher/Decypher directories."""
+        wf = workflow.FileCryptoWorkflow(
+            menu_instance=self,
+            resource_type='directory',
+            working_directory=self.working_directory)
+        return wf.start(args)
+
+    def do_c(self, args):
+        """Cipher/Decypher dataframe columns."""
+        self.pwarning('Feature coming soon')
+
+    # Aliases.
+    do_1 = do_m
+    do_2 = do_f
+    do_3 = do_d
+    do_4 = do_c
+    # do_q = do_b
+
+
+class ScramblerAppHome(BaseMenu):
+    """Main App menu."""
+
+    def __init__(self, scrambler):
+        super().__init__(allowed_commands=['e', 'd', 's', 'q', 'help'],
+                         scrambler=scrambler,
+                         submenu_type='home',
+                         commands_that_clear_screen=['pwd', 'ls'])
+        self.prompt = '> '
+        self.working_directory = pathlib.Path.cwd()
+        self.clear_and_show_help()
+        self.commands_that_clear_screen: list[str] = ['pwd', 'ls']
+
+    def clear_and_show_help(self):
+        super().clear_and_show_help('Scrambler App')
+
+    def do_q(self, args):
+        """Quit"""
+        self.psuccess('Goodbye!')
+        return True
+
+    def do_s(self, args):
+        """Settings"""
+        sub_menu = SettingsSubMenu(
+            scrambler=self.scrambler,
+            parent=self,
+            working_directory=self.working_directory,
+        )
+
+        sub_menu.clear_and_show_help()
+        # Don't exit this sub-menu unless the user types 'b' (back).
+        sub_menu.cmdloop()
+
+    def do_e(self, args):
+        """Encrypt"""
+        sub_menu = CryptoSubMenu(
+            scrambler=self.scrambler,
+            encrypt=True,
+            working_directory=self.working_directory,
+        )
+
+        sub_menu.clear_and_show_help()
+        # Don't exit this sub-menu unless the user types 'b' (back).
+        sub_menu.cmdloop()
+
+    def do_d(self, args):
+        """Decrypt"""
+        sub_menu = CryptoSubMenu(
+            scrambler=self.scrambler,
+            encrypt=False,
+            working_directory=self.working_directory,
+        )
+
+        sub_menu.clear_and_show_help()
+        # Don't exit this sub-menu unless the user types 'b' (back).
+        sub_menu.cmdloop()
