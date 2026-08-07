@@ -3,6 +3,8 @@ import pathlib
 import re
 from typing import Type, Union
 
+from cmd2.string_utils import strip_quotes
+
 from ..dircrawler.filemodder import FileModder
 
 
@@ -47,6 +49,7 @@ class Workflow:
                     done = True
                 else:
                     self.menu.perror('Error: Password cannot be empty')
+                    attempts += 1
 
         return pwd
 
@@ -92,12 +95,13 @@ class FileCryptoWorkflow(Workflow):
         prefix: str = f'[NOTE]: By default, {self.keyword.lower()} will create {"a new file" if self.resource_type == "file" else "new files"} with "'
         suffix: str = '" at the end. You may change this suffix.'
         notice_prompt: str = ''.join([
-            prefix, self.menu.instance.encrypted_file_suffix if self.encrypt
-            else self.menu.instance.decrypted_file_suffix, suffix
+            prefix, '-', self.menu.instance.encrypted_file_suffix if
+            self.encrypt else self.menu.instance.decrypted_file_suffix, suffix
         ])
 
-        destination_file_suffix: str = self.show_note_and_get_prompt(
-            notice_prompt, 'Specify a different suffix [Optional]: ')
+        destination_file_suffix: str = self.menu.instance.clean_file_suffix(
+            self.show_note_and_get_prompt(
+                notice_prompt, 'Specify a different suffix [Optional]: '))
 
         encrypt_suffix: str = self.menu.instance.encrypted_file_suffix
         decrypt_suffix: str = self.menu.instance.decrypted_file_suffix
@@ -145,7 +149,7 @@ class FileCryptoWorkflow(Workflow):
 
         return depth_int
 
-    def keep_original_files(self) -> bool:
+    def keep_original_files(self) -> bool | None:
         resource_name: str = 'file' if self.resource_type == 'file' else 'files'
         delete_original_files: str = self.menu.read_input(
             f'Type D to delete the original {resource_name} [Optional]: '
@@ -158,18 +162,24 @@ class FileCryptoWorkflow(Workflow):
             delete_original_files = self.menu.read_input(
                 f'Are you sure you want to {self.keyword.lower()} the {resource_name} and DELETE the original (Y/n)? '
             ).strip()
-            if delete_original_files in ['Y', 'y', '']:
+            if delete_original_files in ['Y']:
                 keep_orig = False
-            else:
+            elif delete_original_files in ['n']:
                 keep_orig = True
+            else:
+                self.menu.perror('Operation cancelled, please input Y or n.')
+                return None
         else:
             preserve_original_files = self.menu.read_input(
                 f'Are you sure you want to {self.keyword.lower()} the {resource_name} and KEEP the original (Y/n)? '
             ).strip()
-            if preserve_original_files in ['Y', 'y', '']:
+            if preserve_original_files in ['Y']:
                 keep_orig = True
-            else:
+            elif preserve_original_files in ['n']:
                 keep_orig = False
+            else:
+                self.menu.perror('Operation cancelled, please input Y or n.')
+                return None
 
         self.menu.poutput()
 
@@ -185,31 +195,47 @@ class FileCryptoWorkflow(Workflow):
         self.menu.poutput(f'{dir_path}')
         self.menu.poutput()
 
-    def start(self, args: str):
+    def start(self, args: str, selectable_directory: bool = False):
         # args contains the file or directory path.
         path: str = args.strip() if args else ''
 
-        self.print_option_heading(
-            question_prefix=f'Which {self.resource_type} do you want to')
+        if self.resource_type == 'directory' and not selectable_directory:
+            path = self.working_directory
+        else:
+            self.print_option_heading(
+                question_prefix=f'Which {self.resource_type} do you want to')
 
-        if not path:
-            self.menu.pwarning('Press <TAB> to browse.')
+            if not path:
+                self.menu.pwarning('Press <TAB> to browse.')
+                self.menu.poutput()
+                try:
+                    # Interactive prompt.
+                    path = self.menu.read_input(prompt='> ',
+                                                completer=self.complete)
+
+                    # cmd2 automatically adds quotes to the prompt when using
+                    # the tab autocompletion feature. If a file or directory,
+                    # in any place below the current one contains a space, it adds
+                    # a `"` quote; if a file contains `"` inside the name, cmd2
+                    # uses `'` as quote instead. This quote is added to the prompt
+                    # and passed as raw path. The only clean and simple cases
+                    # is with standard file names.
+                    path = path.strip()
+                    old_path: str = path
+                    path = strip_quotes(path)
+                    # If unbalanced quotes, remove the first quote manually.
+                    if path and path == old_path and path[0] in ['"', "'"]:
+                        path = path[1:]
+                except (EOFError, KeyboardInterrupt):
+                    self.menu.perror('\nAborted.')
+                    return False
+
             self.menu.poutput()
-            try:
-                # Interactive prompt.
-                path = self.menu.read_input(prompt='> ',
-                                            completer=self.complete)
-            except (EOFError, KeyboardInterrupt):
-                self.menu.perror('\nAborted.')
+
+            if not path:
+                self.menu.perror(
+                    f"Error: Specify a valid path. Press TAB to browse.")
                 return False
-
-        self.menu.poutput()
-
-        path = path.strip()
-        if not path:
-            self.menu.perror(
-                f"Error: Specify a valid path. Press TAB to browse.")
-            return False
 
         p_path: pathlib.Path = pathlib.Path(path).expanduser().resolve()
 
@@ -227,6 +253,8 @@ class FileCryptoWorkflow(Workflow):
                 crypto_file_extensions = self.get_destination_files_suffix()
 
                 keep_orig: bool = self.keep_original_files()
+                if keep_orig is None:
+                    return False
 
                 password = self.get_password()
                 if not password:
@@ -263,6 +291,8 @@ class FileCryptoWorkflow(Workflow):
                 extension = self.filter_source_files_by_extension()
                 depth: int = self.filter_source_files_by_directory_depth()
                 keep_orig: bool = self.keep_original_files()
+                if keep_orig is None:
+                    return False
 
                 password = self.get_password()
                 if not password:
@@ -289,9 +319,9 @@ class FileCryptoWorkflow(Workflow):
                 self.print_option_title()
                 if result['status'] == 200:
                     for out in result['output']:
-                        self.menu.psuccess(out)
+                        self.menu.poutput(out)
                         self.menu.poutput()
-                    self.menu.psuccess('Operation completed.')
+                    self.menu.poutput('Operation completed.')
                 else:
                     self.menu.perror('Error.')
                     self.menu.poutput()

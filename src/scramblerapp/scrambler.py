@@ -23,11 +23,11 @@ import json
 import os
 import pathlib
 import re
-import shlex
 import subprocess
 import sys
 
 import cmd2
+from cmd2.string_utils import strip_quotes
 from platformdirs import PlatformDirs
 
 from .utils.commoncmd import CommonCmd
@@ -79,6 +79,9 @@ class Instance:
         self.decrypted_file_suffix: str = self.get_crypto_suite_mappings(False)
         self.crypto_backend: str = 'openssl'
 
+    def clean_file_suffix(self, suffix: str):
+        return suffix.strip('-')
+
     def _is_valid_file_suffix(self, suffix: str) -> bool:
         # Avoid (/ o \), forbidden Windows chars or empty spaces and some
         # other special chars.
@@ -102,10 +105,12 @@ class Instance:
                 payload: str = self.settings_file.read_text(encoding='utf-8')
                 data: dict[str] = json.loads(payload)
 
-                self.decrypted_file_suffix = data.get(
-                    'decrypted_file_suffix', self.decrypted_file_suffix)
-                self.encrypted_file_suffix = data.get(
-                    'encrypted_file_suffix', self.encrypted_file_suffix)
+                self.decrypted_file_suffix = self.clean_file_suffix(
+                    data.get('decrypted_file_suffix',
+                             self.decrypted_file_suffix))
+                self.encrypted_file_suffix = self.clean_file_suffix(
+                    data.get('encrypted_file_suffix',
+                             self.encrypted_file_suffix))
                 self.crypto_backend = data.get('crypto_backend',
                                                self.crypto_backend)
 
@@ -164,9 +169,13 @@ class BaseMenu(cmd2.Cmd):
         self.commands_that_clear_screen: list[str] = commands_that_clear_screen
 
     def _clear_terminal(self):
-        # Use 'cls' for Windows, 'clear' for Linux/macOS
-        command = 'cls' if os.name == 'nt' else 'clear'
-        subprocess.run(command, shell=True)
+        if os.name == 'nt':
+            subprocess.run('cls')
+        else:
+            subprocess.run('clear')
+            # Remove scrollback.
+            print('\033[3J', end='', flush=True)
+        self.current_line = ''
 
         # ANSI code alternative
         # self.poutput('\x1b[H\x1b[2J', end='')
@@ -202,6 +211,8 @@ class BaseMenu(cmd2.Cmd):
             self.poutput(
                 f'(o) {self.instance.version_text} (p) Python Cryptography')
 
+            # Disable.
+            """
             self.poutput()
             self.poutput(f'Encrypted File Suffix:')
             func_es = getattr(self, f'do_es')
@@ -211,11 +222,21 @@ class BaseMenu(cmd2.Cmd):
             self.poutput(f'Decrypted File Suffix:')
             func_ds = getattr(self, f'do_ds')
             self.poutput(f'(ds) {func_ds.__doc__}')
+            """
 
             self.poutput()
-            self.poutput(f'Learn more')
-            func = getattr(self, f'do_a')
-            self.poutput(f'(a) {func.__doc__}')
+            self.poutput(f'More')
+            func_a = getattr(self, f'do_a')
+            func_pwd = getattr(self, f'do_pwd')
+            func_ls = getattr(self, f'do_ls')
+            self.poutput(f'{"(a)":<5} {func_a.__doc__}')
+            self.poutput(f'{"(pwd)":<5} {func_pwd.__doc__}')
+            self.poutput(f'{"(ls)":<5} {func_ls.__doc__}')
+
+            self.poutput()
+            self.poutput(f'Back')
+            func = getattr(self, f'do_b')
+            self.poutput(f'(b) Back')
 
         else:
             self.poutput(question)
@@ -257,6 +278,22 @@ class BaseMenu(cmd2.Cmd):
         if self._from_home_menu:
             self.read_input('\nPress Enter to continue...')
 
+    def do_pwd(self, args):
+        """Show current directory"""
+        self.poutput(f'Current directory:')
+        self.poutput()
+        self.poutput(f'{self.working_directory}')
+        if self.__class__.__name__ == 'ScramblerAppHome':
+            self.read_input('\nPress Enter to continue...')
+
+    def do_ls(self, args):
+        """List files"""
+        self.poutput(f'Directory listing:')
+        self.poutput()
+        [self.poutput(l) for l in CommonCmd.ls(self.working_directory)]
+        if self.__class__.__name__ == 'ScramblerAppHome':
+            self.read_input('\nPress Enter to continue...')
+
 
 class SettingsSubMenu(BaseMenu):
 
@@ -265,11 +302,11 @@ class SettingsSubMenu(BaseMenu):
                  parent,
                  working_directory: pathlib.Path = pathlib.Path.cwd()):
         super().__init__(allowed_commands=[
-            'b', 'q', 'o', 'p', 'es', 'ds', 'a', 'help', 's'
+            'b', 'o', 'p', 'es', 'ds', 'a', 'help', 's', 'ls', 'pwd'
         ],
                          scrambler=scrambler,
                          submenu_type='settings',
-                         commands_that_clear_screen=['a', 's'])
+                         commands_that_clear_screen=['a', 's', 'ls', 'pwd'])
 
         self.prompt = '> '
         self.working_directory = working_directory
@@ -323,7 +360,7 @@ class SettingsSubMenu(BaseMenu):
         return stop
 
     def do_b(self, args):
-        """Go back to the Home menu."""
+        """Back"""
         return True
 
     def do_s(self, args: str):
@@ -342,7 +379,20 @@ class SettingsSubMenu(BaseMenu):
                 self.pwarning('\nAborted.')
                 return False
 
+        # cmd2 automatically adds quotes to the prompt when using
+        # the tab autocompletion feature. If a file or directory,
+        # in any place below the current one contains a space, it adds
+        # a `"` quote; if a file contains `"` inside the name, cmd2
+        # uses `'` as quote instead. This quote is added to the prompt
+        # and passed as raw path. The only clean and simple cases
+        # is with standard file names.
         path = path.strip()
+        old_path: str = path
+        path = strip_quotes(path)
+        # If unbalanced quotes, remove the first quote manually.
+        if path and path == old_path and path[0] in ['"', "'"]:
+            path = path[1:]
+
         if not path:
             return False
 
@@ -385,7 +435,9 @@ class SettingsSubMenu(BaseMenu):
 
     def do_a(self, args):
         """About"""
-        self.poutput('DUMMY about, just print on screen...')
+        self.poutput(
+            'The Scrambler is a simple, modern, Python encryption tool that makes it easy to secure and/or obfuscate messages, files, and data.'
+        )
         return True
 
     def do_ds(self, args):
@@ -396,7 +448,7 @@ class SettingsSubMenu(BaseMenu):
         """Set encrypted suffix"""
         self._change_suffix(encrypt=True)
 
-    do_q = do_b
+    # do_q = do_b
 
 
 class CryptoSubMenu(BaseMenu):
@@ -405,10 +457,11 @@ class CryptoSubMenu(BaseMenu):
                  scrambler,
                  encrypt: bool = True,
                  working_directory: pathlib.Path = pathlib.Path.cwd()):
-        super().__init__(allowed_commands=['1', '2', '3', '4'],
-                         scrambler=scrambler,
-                         submenu_type='encrypt' if encrypt else 'decrypt',
-                         commands_that_clear_screen=['1', '2', '3', '4'])
+        super().__init__(
+            allowed_commands=['1', '2', '3', '4', 'b'],
+            scrambler=scrambler,
+            submenu_type='encrypt' if encrypt else 'decrypt',
+            commands_that_clear_screen=['1', '2', '3', '4', 'ls', 'pwd'])
 
         self.working_directory = working_directory
 
@@ -421,6 +474,9 @@ class CryptoSubMenu(BaseMenu):
         self.prompt = '> '
         self.encrypt = encrypt
         self._from_home_menu = False
+
+        self.statement_parser.allow_opening_quote = False
+        self.statement_parser.allow_closing_quote = False
 
     def clear_and_show_help(self):
         super().clear_and_show_help(
@@ -441,7 +497,7 @@ class CryptoSubMenu(BaseMenu):
         return stop
 
     def do_b(self, args):
-        """Go back to the Home menu"""
+        """Back"""
         return True
 
     def do_m(self, args):
@@ -457,14 +513,6 @@ class CryptoSubMenu(BaseMenu):
             working_directory=self.working_directory)
         return wf.start(args)
 
-    def complete_f(self, text, line, begidx, endidx):
-        """Autocomplete paths."""
-        wf = workflow.FileCryptoWorkflow(
-            menu_instance=self,
-            resource_type='file',
-            working_directory=self.working_directory)
-        return wf.complete(text, line, begidx, endidx)
-
     def do_d(self, args):
         """Cipher/Decypher directories."""
         wf = workflow.FileCryptoWorkflow(
@@ -472,14 +520,6 @@ class CryptoSubMenu(BaseMenu):
             resource_type='directory',
             working_directory=self.working_directory)
         return wf.start(args)
-
-    def complete_d(self, text, line, begidx, endidx):
-        """Autocomplete paths."""
-        wf = workflow.FileCryptoWorkflow(
-            menu_instance=self,
-            resource_type='directory',
-            working_directory=self.working_directory)
-        return wf.complete(text, line, begidx, endidx)
 
     def do_c(self, args):
         """Cipher/Decypher dataframe columns."""
@@ -490,18 +530,17 @@ class CryptoSubMenu(BaseMenu):
     do_2 = do_f
     do_3 = do_d
     do_4 = do_c
-    do_q = do_b
+    # do_q = do_b
 
 
 class ScramblerAppHome(BaseMenu):
     """Main App menu."""
 
     def __init__(self, scrambler):
-        super().__init__(
-            allowed_commands=['e', 'd', 'ls', 'pwd', 's', 'q', 'help'],
-            scrambler=scrambler,
-            submenu_type='home',
-            commands_that_clear_screen=['pwd', 'ls'])
+        super().__init__(allowed_commands=['e', 'd', 's', 'q', 'help'],
+                         scrambler=scrambler,
+                         submenu_type='home',
+                         commands_that_clear_screen=['pwd', 'ls'])
         self.prompt = '> '
         self.working_directory = pathlib.Path.cwd()
         self.clear_and_show_help()
@@ -514,20 +553,6 @@ class ScramblerAppHome(BaseMenu):
         """Quit"""
         self.psuccess('Goodbye!')
         return True
-
-    def do_pwd(self, args):
-        """Show current directory"""
-        self.poutput(f'Current directory:')
-        self.poutput()
-        self.poutput(f'{self.working_directory}')
-        self.read_input('\nPress Enter to continue...')
-
-    def do_ls(self, args):
-        """List files"""
-        self.poutput(f'Directory listing:')
-        self.poutput()
-        [self.poutput(l) for l in CommonCmd.ls(self.working_directory)]
-        self.read_input('\nPress Enter to continue...')
 
     def do_s(self, args):
         """Settings"""

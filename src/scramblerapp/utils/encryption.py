@@ -182,6 +182,7 @@ class OpenSSLEncyptor:
             return {'status': 400, 'message': 'Error: Invalid input path.'}
 
         _inpath = ' -in {}'.format(Crawler.escape(Crawler.posixize(inpath)))
+
         if outpath == None:
             _outpath = ''
         else:
@@ -216,10 +217,10 @@ class OpenSSLEncyptor:
             result['status'] = 400
             if decrypt == True:
                 result[
-                    'message'] = 'Error: Failed to decrypt file, make sure your password is correct.'
+                    'message'] = f'Error: Failed to decrypt file to "{str(outpath)}", make sure your password is correct.'
             else:
                 result[
-                    'message'] = 'Error: Encryption failed, could not encrypt file.'
+                    'message'] = f'Error: Encryption failed, could not encrypt file to "{str(outpath)}: {process.stderr.decode()}".'
             return result
 
     @classmethod

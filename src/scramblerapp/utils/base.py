@@ -19,7 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from os import remove
+import os
+import pathlib
+import secrets
 from os.path import exists, isdir
 from random import randrange
 from typing import Type, Union
@@ -32,6 +34,31 @@ from .encryption import OpenSSLEncyptor as ossl
 
 
 class Scrambler:
+
+    def _randomize_and_remove_file(self, file_path: str) -> bool:
+        r"""Randomize file header (4096 bytes) then remove it."""
+        file = pathlib.Path(file_path)
+        if not file.is_file():
+            return False
+
+        file_size: int = file.stat().st_size
+
+        # 4096 bytes is the standard block size on file systems.
+        bytes_to_overwrite: int = min(4096, file_size)
+
+        if bytes_to_overwrite > 0:
+            with file.open('r+b') as f:
+                # Overwrite the file header randomly
+                f.write(secrets.token_bytes(bytes_to_overwrite))
+                f.flush()
+                os.fsync(f.fileno())
+
+        # Set file size to 0 bytes to overwrite the file system table.
+        with file.open('wb') as f:
+            f.truncate(0)
+
+        # Remove file normally.
+        file.unlink()
 
     def encrypt_msg(self,
                     password: str,
@@ -90,8 +117,7 @@ class Scrambler:
         response = ossl.encrypt(password, data, decrypt)
         if response['status'] == 400:
             try:
-                # FIXME: this is not a crypto safe remove operation.
-                remove(outpath)
+                self._randomize_and_remove_file(outpath)
             except:
                 pass
             return response
@@ -102,8 +128,7 @@ class Scrambler:
             return result
 
         try:
-            # FIXME: this is not a crypto safe remove operation.
-            remove(clean_filepath)
+            self._randomize_and_remove_file(clean_filepath)
             result['status'] = 200
             result['message'] = response['message'] + ' (original deleted).'
         except:

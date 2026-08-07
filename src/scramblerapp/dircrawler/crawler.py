@@ -21,6 +21,7 @@
 
 import os
 import re
+import shlex
 from os.path import basename, dirname, isdir, isfile, join
 from typing import Type, Union
 
@@ -45,10 +46,9 @@ class Crawler:
     @classmethod
     def escape(self, path: str) -> str:
         """
-        Adds backslash in front of any space character that
-        is not preceded by a backslash.
+        Use safe escaping.
         """
-        return re.sub(r'(?<!\\) ', r'\\ ', path)
+        return shlex.quote(path)
 
     @classmethod
     def joinpath(self, path: str, filename: str) -> str:
